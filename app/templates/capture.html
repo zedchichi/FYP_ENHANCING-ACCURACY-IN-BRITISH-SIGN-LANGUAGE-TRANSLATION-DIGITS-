@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,10 +54,19 @@
                     };
                     xhr.onload = function() {
                         if (xhr.status === 200) {
-                            // Display the translated image
-                            var translatedImage = document.getElementById('translated-image');
-                            translatedImage.src = xhr.responseText;
-                            translatedImage.style.display = 'block';
+                            
+                            //  Display the translated image when it becomes available
+                            var response = JSON.parse(xhr.responseText);
+
+                            //  Hide the loading spinner and show the translated
+                            var mobilenetResults = response.mobilenet;
+                            var vgg16Results = response.vgg16;
+
+                            // Update the DOM  with the results
+                            alert("MobileNet Predictions: " + mobilenetResults);
+                            alert("VGG16 Predictions: "  + vgg16Results);
+                            document.getElementById('translation-results').innerText = "MobileNet: " + mobilenetResults + ", VGG16: " + vgg16Results;
+
                         } else {
                             // Show an error message if the translation failed
                             alert('Translation failed: ' + xhr.statusText);
