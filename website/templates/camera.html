@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture Page</title>
+</head>
+<body>
+    <h1>Capture an Image from your Camera!</h1>
+    <form action="{{ url_for('capture_image') }}" method="post">
+        <input type="submit" value="Capture Image">
+    </form>
+</body>
+</html>
