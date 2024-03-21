@@ -4,11 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Capture Page</title>
+    <style>
+        #camera-feed {
+            width: 400px;
+            height: 300px;
+            border: 1px solid black;
+        }
+    </style>
 </head>
 <body>
     <h1>Capture an Image from your Camera!</h1>
-    <form action="{{ url_for('capture_image') }}" method="post">
-        <input type="submit" value="Capture Image">
-    </form>
+    <video id="camera-feed" autoplay></video>
+    <br>
+    <button id="capture-button">Capture Image</button>
+    <br>
+    <canvas id="captured-image" style="display: none;"></canvas>
+    <br>
+    <img id="translated-image" src="" alt="Translated Image" style="display: none;">
+    <script>
+        // Get access to the user's webcam
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(function(stream) {
+                // Display the camera feed in the video element
+                var video = document.getElementById('camera-feed');
+                video.srcObject = stream;
+                video.play();
+
+                // Set up the capture button
+                var captureButton = document.getElementById('capture-button');
+                captureButton.addEventListener('click', function() {
+                    // Capture an image from the camera feed
+                    var canvas = document.getElementById('captured-image');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Send the captured image to the server for translation
+                    var imageData = canvas.toDataURL('image/jpeg');
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/translate-image', true);
+                    xhr.upload.onprogress = function(event) {
+                        if (event.lengthComputable) {
+                            // Show a loading spinner while the image is being translated
+                            var translatedImage = document.getElementById('translated-image');
+                            translatedImage.src = '';
+                            translatedImage.style.display = 'none';
+                        }
+                    };
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            // Display the translated image
+                            var translatedImage = document.getElementById('translated-image');
+                            translatedImage.src = xhr.responseText;
+                            translatedImage.style.display = 'block';
+                        } else {
+                            // Show an error message if the translation failed
+                            alert('Translation failed: ' + xhr.statusText);
+                        }
+                    };
+                    xhr.send(imageData);
+
+                    // Hide the captured image
+                    var capturedImage = document.getElementById('captured-image');
+                    capturedImage.style.display = 'none';
+                });
+            })
+            .catch(function(error) {
+                console.error('Error accessing webcam:', error);
+            });
+    </script>
 </body>
 </html>
