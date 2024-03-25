@@ -1,6 +1,6 @@
 import os
 import cv2
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify, Blueprint
 from werkzeug.utils import secure_filename
 from keras.preprocessing import image
 import numpy as np
@@ -19,18 +19,20 @@ from keras.applications.mobilenet import decode_predictions
 mobilenet = MobileNet(weights='imagenet')
 vgg16 = VGG16(weights='imagenet')
 
-
+# Defining a blueprint
+views_blueprint = Blueprint('views', __name__, template_folder='templates')
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 CORS(app)
 
 
-@app.route('/')
+# @app.route('/')
+@views_blueprint.route('/')
 def home():
     return render_template('home.html')
 
-@app.route('/capture', methods=['GET', 'POST'])
+@views_blueprint.route('/capture', methods=['GET', 'POST'])
 def capture_image():
     if request.method == 'POST':
         # Get access to the user's webcam
@@ -55,7 +57,7 @@ def capture_image():
         cap.release()
     return render_template('camera_capture.html')
 
-@app.route('/upload', methods=['GET', 'POST'])
+@views_blueprint.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         file = request.files['file']
@@ -65,12 +67,12 @@ def upload_file():
             return redirect(url_for('uploaded_file', filename=filename))
     return render_template('upload.html')
 
-@app.route('/uploads/<filename>')
+@views_blueprint.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory('uploads', filename)
 
 
-@app.route('/translate-image', methods=['POST'])
+@views_blueprint.route('/translate-image', methods=['POST'])
 def translate_image():
     # Decode the image from base64
     image_data = request.data.decode('utf-8')
@@ -100,5 +102,5 @@ def translate_image():
 
     return jsonify(response)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)

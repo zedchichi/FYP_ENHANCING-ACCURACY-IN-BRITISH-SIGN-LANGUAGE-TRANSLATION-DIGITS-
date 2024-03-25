@@ -8,10 +8,12 @@
 <body>
     <h1>Welcome to the Home Page!</h1>
     <p>
-        <a href="upload.html">Upload a new image</a>
+        <a href="{{ url_for('views.upload.html') }}">Upload a new image</a>
+<!--        <a href="upload.html">Upload a new image</a>-->
     </p>
     <p>
-        <a href="capture.html">Capture an image</a>
+        <a href="{{ url_for('views.capture.html') }}">Capture an image</a>
+<!--        <a href="capture.html">Capture an image</a>-->
     </p>
 </body>
 </html>
