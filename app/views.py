@@ -33,7 +33,7 @@ def home():
     return render_template('home.html')
 
 @views_blueprint.route('/capture', methods=['GET', 'POST'])
-def capture_image():
+def capture():
     if request.method == 'POST':
         # Get access to the user's webcam
         cap = cv2.VideoCapture(0)
@@ -51,25 +51,25 @@ def capture_image():
 
                 # Release the webcam and redirect to the upload page
                 cap.release()
-                return redirect(url_for('uploaded_file', filename=filename))
+                return redirect(url_for('views.uploaded_file', filename=filename))
 
         # Release the webcam and render the capture page
         cap.release()
-    return render_template('camera_capture.html')
+    return render_template('capture.html')
 
 @views_blueprint.route('/upload', methods=['GET', 'POST'])
-def upload_file():
+def upload():
     if request.method == 'POST':
         file = request.files['file']
         if file:
             filename = secure_filename(file.filename)
             file.save(os.path.join('uploads', filename))
-            return redirect(url_for('uploaded_file', filename=filename))
+            return redirect(url_for('views.uploaded_file', filename=filename))
     return render_template('upload.html')
 
-@views_blueprint.route('/uploads/<filename>')
+@views_blueprint.route('/upload/<filename>')
 def uploaded_file(filename):
-    return send_from_directory('uploads', filename)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @views_blueprint.route('/translate-image', methods=['POST'])
