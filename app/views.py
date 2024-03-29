@@ -21,7 +21,7 @@ from tensorflow.keras.models import load_model
 mobilenet = MobileNet(weights='imagenet')
 # vgg16 = VGG16(weights='imagenet')
 
-vggmodel_path = 'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_Best_Model_{dl}_{n}_{lr}_{reg}.keras'
+vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_Best_Model_{dl}_{n}_{lr}_{reg}.keras'
 custom_vgg16 = load_model(vggmodel_path)
 
 # Defining a blueprint
