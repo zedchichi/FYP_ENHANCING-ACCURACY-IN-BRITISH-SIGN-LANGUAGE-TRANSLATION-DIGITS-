@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 from werkzeug.utils import secure_filename
 from keras.preprocessing import image
 import numpy as np
-from keras.applications import MobileNet, VGG16
+from keras.applications import MobileNet
 
 import base64
 import re
@@ -14,10 +14,15 @@ from PIL import Image
 from flask_cors import CORS
 
 from keras.applications.mobilenet import decode_predictions
+import tensorflow.keras.models
+from tensorflow.keras.models import load_model
 
 
 mobilenet = MobileNet(weights='imagenet')
-vgg16 = VGG16(weights='imagenet')
+# vgg16 = VGG16(weights='imagenet')
+
+vggmodel_path = 'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_Best_Model_{dl}_{n}_{lr}_{reg}.keras'
+custom_vgg16 = load_model(vggmodel_path)
 
 # Defining a blueprint
 views_blueprint = Blueprint('views', __name__, template_folder='templates')
@@ -87,7 +92,7 @@ def translate_image():
 
     # Make predictions with MobileNet and VGG16
     mobilenet_predictions = mobilenet.predict(img_array)
-    vgg16_predictions = vgg16.predict(img_array)
+    vgg16_predictions = custom_vgg16.predict(img_array)
 
    # Decode the predictions
     decoded_mobilenet_predictions = decode_predictions(mobilenet_predictions, top=3)[0]
@@ -99,7 +104,6 @@ def translate_image():
         'vgg16': [(pred[1], float(pred[2])) for pred in decoded_vgg16_predictions]
     }
     response = jsonify(response_predictions)
-
     return jsonify(response)
 
 # if __name__ == '__main__':
