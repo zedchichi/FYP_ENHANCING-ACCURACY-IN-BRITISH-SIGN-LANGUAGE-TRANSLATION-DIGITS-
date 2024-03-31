@@ -131,12 +131,15 @@
     </div>
 
      <div class="main-content">
-         <div class="upload-box">
-             <div class="drag-area">
-                 <p>Drag and drop your image here</p>
-                 <button class="btn" onclick="document.getElementById('file-input').onclick()">Upload</button>
-                 <input type="file" id="file-input" hidden onchange="uploadFile()">
+         <div class="upload-box" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+             <div class="drag-area" id="drag-area">
+                 <p>Drag and drop your image here or click to select a file</p>
+                 <button class="btn" onclick="document.getElementById('file-input').click()">Choose File</button>
+
+                 <input type="file" id="file-input" hidden onchange="handleFiles(this.files)">
              </div>
+             <img id="preview" style="max-width: 200px; display: none;" />
+
 
              <div class="consent-checkbox">
                  <input type="checkbox" id="consent" name="consent" required>
@@ -144,15 +147,17 @@
              </div>
          </div>
 
+         <div id="prediction-result" style="display: none"></div>
 
-        <div class="result-container" id="result-container">
 
-        </div>
+<!--        <div class="result-container" id="result-container">-->
+
+<!--        </div>-->
 
          <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
              <h2>Prediction Result:</h2>
              <img id="predicted-image" src="" alt="Predicted Image" style="max-width: 200px; display: block; margin: auto;">
-             <div id="prediction-result"></div>
+<!--             <div id="prediction-result"></div>-->
 
             <div class="feedback-section">
                 <label for="yes">Was the prediction correct?</label>
@@ -166,6 +171,7 @@
             <input type="submit" value="SUBMIT">
          </form>
      </div>
+    <div id="loadingIndicator" style="display: none;">Uploading...</div>
 
 
     <div class="footer">
@@ -174,98 +180,73 @@
 
     <script>
 
-         function uploadFile() {
-                // Implement file upload functionality here
-                // After file is uploaded, you would call a function to handle the prediction and then display the result container.
+        function dragOverHandler(event) {
+            event.preventDefault();
+        }
 
-                let fileInput = document.getElementId('file-input');
-                let file = fileInput.files[0]
+        function dropHandler(event) {
+            event.preventDefault();
+            if (event.dataTransfer.items) {
+                // Use DataTransferItemList interface to access the file(s)
+                handleFiles(event.dataTransfer.files);
+            }
+        }
 
-                if(!file){
-                    alert('Please select a file to upload')
-                    return;
-                }
-
-               let formData = new FormData();
-                formData.append('file', file);
-
-                let consentCheckbox = document.getElementId('consent');
-                if (!consentCheckbox.checked) {
+        function handleFiles(files) {
+            if (files.length > 0) {
+                let file = files[0];
+                if (!document.getElementById('consent').checked) {
                     alert('Please provide consent to use your data for model training.');
                     return;
                 }
-
-                 // Append consent to the form data
-                formData.append('consent',consentCheckbox.checked);
-
-                // Use fetch to send the file to the server
-                fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json()) // Assuming the server responds with JSON
-                .then(data => {
-                    console.log(data); // Handle the response data from the server
-                    // For example, if your server returns the prediction result:
-                    document.getElementById('prediction-result').innerText = data.result;
-                    // Show the result container
-                    document.getElementById('result-container').style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-
-         }
-
-        function submitFeedback(event) {
-            event.preventDefault();
-            // Get the value of the selected radio button
-            let feedback = document.querySelector('input[name="feedback"]:checked').value;
-            let correctPrediction = document.getElementById('correct-prediction').value;
-
-            if (feedback === 'no' && !correctPrediction) {
-                alert('Please enter the correct prediction.');
-                return;
+                previewFile(file);
+                uploadFile(file);
             }
+        }
 
-            // Implement the logic to send feedback to your server
-            // Construct the feedback object
-            const feedbackData = {
-                feedback: feedback,
-                correctPrediction: feedback === 'no' ? correctPrediction : null
-            };
+        function previewFile(file) {
+            let preview = document.getElementById('preview');
+            preview.src = URL.createObjectURL(file);
+            preview.unload = () => URL.revokeObjectURL(preview.src); // Free memory
+            preview.style.display = 'block';
+        }
 
-            // Use fetch to send feedback to your server
-            fetch('/feedback', { // Make sure to use the correct endpoint
+        function uploadFile(file) {
+            document.getElementById('loadingIndicator').style.display = 'block'; // Show loading indicator
+
+            let formData = new FormData();
+            formData.append('file', file);
+            formData.append('consent', document.getElementById('consent').checked);
+
+            fetch('/upload', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(feedbackData),
+                body: formData
             })
+            .then(response => response.json())
+
             .then(response => {
-                if (!response.ok) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                if ( !response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             })
-            .then(data => {
-                console.log('Success:', data);
-                // Hide the feedback form
-                document.getElementById('feedback-form').style.display = 'none';
 
-                // Display a thank-you message
-                const thankYouMessage = document.createElement('div');
-                thankYouMessage.textContent = 'Thank you for your feedback!';
-                thankYouMessage.setAttribute('id', 'thank-you-message');
-                document.body.appendChild(thankYouMessage);
+            .then(data => {
+                displayResults(data);
             })
-            .catch((error) => {
+            .catch(error => {
+                document.getElementById('loadingIndicator').style.display = 'none';
                 console.error('Error:', error);
             });
         }
 
+        function displayResults(data) {
+            let resultContainer = document.getElementById('prediction-result');
+            resultContainer.innerHTML = `Prediction: ${data.prediction}`; // Update with your actual result format
+            resultContainer.style.display = 'block';
 
+        }
     </script>
 </body>
 </html>
