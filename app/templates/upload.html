@@ -147,6 +147,9 @@
              </div>
          </div>
 
+         <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
+
+
          <div id="prediction-result" style="display: none"></div>
 
 
@@ -200,7 +203,7 @@
                     return;
                 }
                 previewFile(file);
-                uploadFile(file);
+                document.getElementById('predictButton').style.display = 'block';
             }
         }
 
@@ -224,15 +227,16 @@
             })
             .then(response => response.json())
 
-            .then(response => {
-                document.getElementById('loadingIndicator').style.display = 'none';
-                if ( !response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
+<!--            .then(response => {-->
+<!--                document.getElementById('loadingIndicator').style.display = 'none';-->
+<!--                if ( !response.ok) {-->
+<!--                    throw new Error('Network response was not ok');-->
+<!--                }-->
+<!--                return response.json();-->
+<!--            })-->
 
             .then(data => {
+                document.getElementById('loadingIndicator').style.display = 'none';
                 displayResults(data);
             })
             .catch(error => {
@@ -241,11 +245,19 @@
             });
         }
 
+        function requestPrediction() {
+            let fileInput = document.getElementById('file-input');
+            if(fileInput.files.length > 0) {
+                uploadFile(fileInput.files[0]);
+            } else {
+                alert('Please select an image to predict.');
+            }
+        }
+
         function displayResults(data) {
             let resultContainer = document.getElementById('prediction-result');
             resultContainer.innerHTML = `Prediction: ${data.prediction}`; // Update with your actual result format
             resultContainer.style.display = 'block';
-
         }
     </script>
 </body>
