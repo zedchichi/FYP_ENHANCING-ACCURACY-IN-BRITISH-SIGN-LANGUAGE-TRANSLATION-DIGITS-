@@ -17,11 +17,18 @@ from keras.applications.mobilenet import decode_predictions
 import tensorflow.keras.models
 from tensorflow.keras.models import load_model
 
+import tensorflow as tf
+import logging
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Suppress deprecated warnings
+
+# If you're using TensorFlow 2.x and still seeing deprecation warnings, you might need to adjust the import or logging setup:
+import tensorflow.compat.v1 as tf
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 mobilenet = MobileNet(weights='imagenet')
 # vgg16 = VGG16(weights='imagenet')
 
-vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_Best_Model_{dl}_{n}_{lr}_{reg}.keras'
+vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_Best_Model3.h5'
 custom_vgg16 = load_model(vggmodel_path)
 
 # Defining a blueprint
@@ -64,13 +71,38 @@ def capture():
 
 @views_blueprint.route('/upload', methods=['GET', 'POST'])
 def upload():
-    if request.method == 'POST':
-        file = request.files['file']
-        if file:
-            filename = secure_filename(file.filename)
-            file.save(os.path.join('uploads', filename))
-            return redirect(url_for('views.uploaded_file', filename=filename))
-    return render_template('upload.html')
+    if request.method =='GET':
+        return render_template('upload.html')
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file:
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        img = image.load_img(filepath, target_size=(224, 224))
+        img_array = np.asarray(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0
+
+        prediction = custom_vgg16.predict(img_array)
+        pred_result = np.argmax(prediction[0])
+
+        return jsonify({'prediction': str(pred_result)})
+
+    return jsonify({'error': 'File processing error'}), 500
+
+
+    # if request.method == 'POST':
+    #     file = request.files['file']
+    #     if file:
+    #         filename = secure_filename(file.filename)
+    #         file.save(os.path.join('uploads', filename))
+    #         return redirect(url_for('views.uploaded_file', filename=filename))
+    # return render_template('upload.html')
 
 @views_blueprint.route('/upload/<filename>')
 def uploaded_file(filename):
@@ -106,5 +138,3 @@ def translate_image():
     response = jsonify(response_predictions)
     return jsonify(response)
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
