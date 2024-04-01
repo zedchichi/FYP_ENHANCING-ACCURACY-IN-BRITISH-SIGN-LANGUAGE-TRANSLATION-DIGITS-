@@ -17,6 +17,9 @@ from keras.applications.mobilenet import decode_predictions
 import tensorflow.keras.models
 from tensorflow.keras.models import load_model
 
+import base64
+import time
+
 import tensorflow as tf
 import logging
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Suppress deprecated warnings
@@ -39,6 +42,9 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 CORS(app)
 
+app = Flask(__name__)
+app.config['CAPTURED_FOLDER'] = 'capture/'
+CORS(app)
 
 # @app.route('/')
 @views_blueprint.route('/')
@@ -47,28 +53,37 @@ def home():
 
 @views_blueprint.route('/capture', methods=['GET', 'POST'])
 def capture():
-    if request.method == 'POST':
-        # Get access to the user's webcam
-        cap = cv2.VideoCapture(0)
+    if request.method == 'GET':
+       return render_template('capture.html')
+    elif request.method == 'POST':
+        if 'image' not in request.json:
+            return jsonify({'error': 'No image data provides'}), 400
 
-        # Set up the capture button
-        capture_button = request.form.get('capture-button')
-        if capture_button:
-            # Capture an image from the webcam
-            ret, frame = cap.read()
-            if ret:
-                # Save the captured image to a file
-                filename = 'captured_image.jpg'
-                filepath = os.path.join('uploads', filename)
-                cv2.imwrite(filepath, frame)
+        image_data = request.json['image']
+        image_data = re.sub('^data:image/.+;base64,', '', image_data)
+        image_data = base64.b64decode(image_data)
 
-                # Release the webcam and redirect to the upload page
-                cap.release()
-                return redirect(url_for('views.uploaded_file', filename=filename))
+        captures_files_path = app.config['CAPTURED_FOLDER']
+        os.makedirs(captures_files_path, exist_ok=True)
 
-        # Release the webcam and render the capture page
-        cap.release()
-    return render_template('capture.html')
+        filename = f"captured_{int(time.time())}.png"
+        filepath = os.path.join(captures_files_path, filename)
+        with open(filepath, 'wb') as file:
+            file.write(image_data)
+
+        img = image.load_img(filepath, target_size=(224, 224))
+        img_array = np.asarray(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0
+
+        cprediction = custom_vgg16.predict(img_array)
+        cpred_result = np.argmax(cprediction[0])
+
+        return jsonify({'prediction': str(cpred_result)})
+
+@views_blueprint.route('/capture/<filename>')
+def captured_file(filename):
+    return send_from_directory(app.config['CAPTURED_FOLDER'], filename)
 
 @views_blueprint.route('/upload', methods=['GET', 'POST'])
 def upload():
