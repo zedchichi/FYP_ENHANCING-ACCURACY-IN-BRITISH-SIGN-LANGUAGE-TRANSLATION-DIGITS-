@@ -6,84 +6,265 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Capture Page</title>
     <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar, .footer {
+            background-color: #333;
+            color: #f2f2f2;
+            padding: 10px 0;
+            text-align: center;
+        }
+        .navbar {
+            top: 0;
+            height: 5%;
+        }
+        .navbar a {
+            padding: 14px 16px;
+            text-decoration: none;
+            color: #f2f2f2;
+            font-size: 17px;
+        }
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #6f4e37;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .upload-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+            margin: auto;
+        }
+        .drag-area {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            cursor: pointer;
+            color: #ccc;
+        }
+        .btn {
+            background-color: #d3a87c;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: #fff;
+            margin: 20px 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .consent-checkbox {
+            color: #B1B2B5;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .consent-checkbox label {
+            cursor: pointer;
+        }
+        .footer {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .upload-box {
+                width: 90%;
+                padding: 30px;
+            }
+            .btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            .consent-checkbox {
+                font-size: 12px;
+            }
+            .navbar a, .footer {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar a, .footer {
+                font-size: 12px;
+            }
+            .btn {
+                font-size: 12px;
+            }
+        }
+
         #camera-feed {
             width: 400px;
             height: 300px;
             border: 1px solid black;
         }
+        #captured-image {
+            display: none; /* Initially hidden */
+            max-width: 400px; /* Adjust as needed */
+        }
     </style>
 </head>
 <body>
-    <h1>Capture an Image from your Camera!</h1>
-    <video id="camera-feed" autoplay></video>
-    <br>
-    <button id="capture-button">Capture Image</button>
-    <br>
-    <canvas id="captured-image" style="display: none;"></canvas>
-    <br>
-    <div id="translation-results"></div>
-    <img id="translated-image" src="" alt="Translated Image" style="display: none;">
+
+     <div class="navbar">
+        <a href="{{ url_for('views.home') }}">HOME</a>
+        <a href="{{ url_for('views.upload') }}">UPLOAD</a>
+        <a href="{{ url_for('views.capture') }}">CAPTURE</a>
+    </div>
+
+     <div class="main-content">
+         <h1>Capture an Image from your Camera!</h1>
+         <video id="camera-feed" autoplay></video>
+         <br>
+         <button id="capture-button">Capture Image</button>
+         <br>
+         <canvas id="captured-image" style="display: none;"></canvas>
+         <br>
+         <button id="retake-button" class="btn" style="display:none;" onclick="retakeImage()">Retake Image</button>
+         <br>
+
+         <div id="translation-results"></div>
+         <img id="translated-image" src="" alt="Translated Image" style="display: none;">
+
+         <div class="consent-checkbox">
+             <input type="checkbox" id="consent" name="consent" required>
+             <label for="consent">I consent to have my data used for model training</label>
+         </div>
+
+         <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
+
+         <div id="loadingIndicator" style="display: none;">Processing...</div>
+
+
+         <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
+             <h2>Prediction Result:</h2>
+             <div id="prediction-result" style="display: none"></div>
+
+
+            <div class="feedback-section">
+                <label for="yes">Was the prediction correct?</label>
+                <input type="radio" id="yes" name="feedback" value="yes">
+                <label for="yes">Yes</label>
+                <input type="radio" id="no" name="feedback" value="no">
+                <label for="no">No</label>
+            </div>
+
+            <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction" required>
+            <input type="submit" value="SUBMIT">
+         </form>
+     </div>
+
+
+    <div class="footer">
+        <p>Contact me @ never.com</p>
+    </div>
+
     <script>
-        // Get access to the user's webcam
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(function(stream) {
-                // Display the camera feed in the video element
-                var video = document.getElementById('camera-feed');
-                video.srcObject = stream;
-                video.play();
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ensure elements are ready before attaching handlers
+            var video = document.getElementById('camera-feed');
+            var canvas = document.getElementById('captured-image');
+            var captureButton = document.getElementById('capture-button');
+            var predictButton = document.getElementById('predictButton');
 
-                // Set up the capture button
-                var captureButton = document.getElementById('capture-button');
-                captureButton.addEventListener('click', function() {
-                    // Capture an image from the camera feed
-                    var canvas = document.getElementById('captured-image');
-                    canvas.width = video.videoWidth;
-                    canvas. Height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas. Height);
-
-                    // Send the captured image to the server for translation
-                    var imageData = canvas.toDataURL('image/jpeg');
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/translate-image', true);
-                    xhr.upload.progress = function(event) {
-                        if (event.lengthComputable) {
-                            // Show a loading spinner while the image is being translated
-                            var translatedImage = document.getElementById('translated-image');
-                            translatedImage.src = '';
-                            translatedImage.style.display = 'none';
-                        }
-                    };
-                    xhr.unload = function() {
-                        if (xhr.status === 200) {
-                            
-                            //  Display the translated image when it becomes available
-                            var response = JSON.parse(xhr.responseText);
-
-                            //  Hide the loading spinner and show the translated
-                            var mobilenetResults = response.mobilenet;
-                            var vgg16Results = response.vgg16;
-
-                            // Update the DOM  with the results
-                            alert("MobileNet Predictions: " + mobilenetResults);
-                            alert("VGG16 Predictions: "  + vgg16Results);
-
-                            document.getElementById('translation-results').innerText = "MobileNet: " + mobilenetResults + ", VGG16: " + vgg16Results;
-
-                        } else {
-                            // Show an error message if the translation failed
-                            alert('Translation failed: ' + xhr.statusText);
-                        }
-                    };
-                    xhr.send(imageData);
-
-                    // Hide the captured image
-                    var capturedImage = document.getElementById('captured-image');
-                    capturedImage.style.display = 'none';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                }).catch(function(error) {
+                    console.error('Error accessing the camera:', error);
                 });
-            })
-            .catch(function(error) {
-                console.error('Error accessing webcam:', error);
+
+            function retakeImage() {
+                video.style.display = 'block';
+
+                //hide canvas and clear its content
+                var ctx = canvas.getContext('2d');
+                ctx.clearRect(video, 0, 0, canvas.width, canvas.height);
+
+                canvas.style.display = 'none';
+                predictButton.style.display = 'none';
+                document.getElementById('retake-button').style.display = 'none';
+                document.getElementById('prediction-result').style.display = 'none';
+                document.getElementById('feedback-form').style.display = 'none';
+            }
+
+            captureButton.addEventListener('click', function() {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.style.display = 'block'; // Show the captured image
+
+                video.style.display = 'none'; //Hide the camera feed
+
+                // Show the predict button
+                predictButton.style.display = 'block';
+
+                //show retake button after capturing
+                document.getElementById('retake-button').style.display = 'block';
             });
+
+
+            predictButton.addEventListener('click', function() {
+                sendImageForPrediction(canvas.toDataURL('image/png'));
+            });
+
+            function sendImageForPrediction(imageData) {
+                document.getElementById('loadingIndicator').style.display = 'block';
+
+                fetch('/translate-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({image: imageData})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    displayResults(data);
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                });
+            }
+
+            function displayResults(data) {
+                // Assuming 'data' is the prediction result you want to display
+                // Modify this part based on the structure of 'data'
+                let resultContainer = document.getElementById('prediction-result');
+                // This example assumes 'data' contains a property 'prediction' with the prediction result
+                resultContainer.innerHTML = `Prediction: ${data.prediction}`;
+                resultContainer.style.display = 'block';
+
+                // Show feedback form
+                document.getElementById('feedback-form').style.display = 'block';
+            }
+        });
     </script>
 </body>
 </html>
