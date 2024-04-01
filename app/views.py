@@ -23,7 +23,8 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Suppress depre
 
 # If you're using TensorFlow 2.x and still seeing deprecation warnings, you might need to adjust the import or logging setup:
 import tensorflow.compat.v1 as tf
-tf.logging.set_verbosity(tf.logging.ERROR)
+#tf.logging.set_verbosity(tf.logging.ERROR)
+tf.compat.v1.logging.set_verbosity(tf.logging.ERROR)
 
 mobilenet = MobileNet(weights='imagenet')
 # vgg16 = VGG16(weights='imagenet')
@@ -80,6 +81,8 @@ def upload():
         return jsonify({'error': 'No selected file'}), 400
     if file:
         filename = secure_filename(file.filename)
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
