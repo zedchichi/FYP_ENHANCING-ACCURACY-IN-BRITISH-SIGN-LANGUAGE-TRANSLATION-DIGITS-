@@ -5,28 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Page</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        body, html {
+            height: 100%;
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        body {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-
+        }
+        .navbar, .footer {
+            background-color: #333;
+            color: #f2f2f2;
+            padding: 10px 0;
+            text-align: center;
         }
         .navbar {
-            background-color: #333;
-            overflow: hidden;
-            display: flex;
-            justify-content: space-between;
+            top: 0;
+            height: 5%;
         }
         .navbar a {
-            float: left;
-            display: block;
-            color: #f2f2f2;
-            text-align: center;
             padding: 14px 16px;
             text-decoration: none;
+            color: #f2f2f2;
             font-size: 17px;
         }
         .navbar a:hover {
@@ -35,28 +37,16 @@
         }
         .main-content {
             flex: 1;
+            padding: 20px;
             background-color: #6f4e37;
             color: #fff;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
-        }
-        .main-content h1 {
-            font-size: 3em;
-            margin: 0;
-        }
-        .footer {
-            background-color: #333;
-            color: #f2f2f2;
-            text-align: center;
-            padding: 10px;
-            font-size: 1em;
-            bottom: 0;
-            width: 96.65%;
-            position: absolute;
-            height: 50px;
-            overflow: hidden;
+            min-height: 0;
+            width: 100%;
+            box-sizing: border-box;
         }
         .upload-box {
             background: #fff;
@@ -64,6 +54,9 @@
             padding: 50px;
             text-align: center;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+            margin: auto;
         }
         .drag-area {
             border: 2px dashed #ccc;
@@ -71,55 +64,55 @@
             cursor: pointer;
             color: #ccc;
         }
-        .drag-area:hover {
-            background-color: #fafafa;
-        }
         .btn {
             background-color: #d3a87c;
             border: none;
             padding: 10px 20px;
             border-radius: 5px;
             color: #fff;
-            margin-top: 10px;
+            margin: 20px 0;
             cursor: pointer;
+            font-size: 16px;
         }
         .consent-checkbox {
-            margin-top: 20px;
             color: #B1B2B5;
+            margin-top: 10px;
+            font-size: 14px;
         }
-        .result-container {
-            display: none;
-            margin-top: 20px;
-        }
-        .feedback-section {
-            text-align: left;
-            display: flex;
-            align-items: center;
-        }
-        .feedback-section label, .feedback-section input {
-            margin-right: 10px;
-        }
-        /* Styles for second image functionality */
-        .feedback-form {
-            display: none;
-            background-color: #fff;
-            color: #000;
-            padding: 20px;
-            margin-top: 20px;
-            text-align: center;
-            border-radius: 10px;
-        }
-        .feedback-form input[type="text"] {
-            padding: 5px;
-            margin: 5px;
-        }
-        .feedback-form input[type="submit"] {
-            background-color: #d3a87c;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            color: #fff;
+        .consent-checkbox label {
             cursor: pointer;
+        }
+        .footer {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .upload-box {
+                width: 90%;
+                padding: 30px;
+            }
+            .btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            .consent-checkbox {
+                font-size: 12px;
+            }
+            .navbar a, .footer {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar a, .footer {
+                font-size: 12px;
+            }
+            .btn {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -150,17 +143,10 @@
          <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
 
 
-         <div id="prediction-result" style="display: none"></div>
-
-
-<!--        <div class="result-container" id="result-container">-->
-
-<!--        </div>-->
-
          <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
              <h2>Prediction Result:</h2>
-             <img id="predicted-image" src="" alt="Predicted Image" style="max-width: 200px; display: block; margin: auto;">
-<!--             <div id="prediction-result"></div>-->
+             <div id="prediction-result" style="display: none"></div>
+
 
             <div class="feedback-section">
                 <label for="yes">Was the prediction correct?</label>
@@ -227,13 +213,13 @@
             })
             .then(response => response.json())
 
-<!--            .then(response => {-->
-<!--                document.getElementById('loadingIndicator').style.display = 'none';-->
-<!--                if ( !response.ok) {-->
-<!--                    throw new Error('Network response was not ok');-->
-<!--                }-->
-<!--                return response.json();-->
-<!--            })-->
+// <!--            .then(response => {-->
+// <!--                document.getElementById('loadingIndicator').style.display = 'none';-->
+// <!--                if ( !response.ok) {-->
+// <!--                    throw new Error('Network response was not ok');-->
+// <!--                }-->
+// <!--                return response.json();-->
+// <!--            })-->
 
             .then(data => {
                 document.getElementById('loadingIndicator').style.display = 'none';
