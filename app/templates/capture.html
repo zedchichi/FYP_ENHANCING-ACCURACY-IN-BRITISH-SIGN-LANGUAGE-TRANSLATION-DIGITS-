@@ -235,7 +235,7 @@
             function sendImageForPrediction(imageData) {
                 document.getElementById('loadingIndicator').style.display = 'block';
 
-                fetch('/translate-image', {
+                fetch('/capture', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -257,7 +257,6 @@
                 // Assuming 'data' is the prediction result you want to display
                 // Modify this part based on the structure of 'data'
                 let resultContainer = document.getElementById('prediction-result');
-                // This example assumes 'data' contains a property 'prediction' with the prediction result
                 resultContainer.innerHTML = `Prediction: ${data.prediction}`;
                 resultContainer.style.display = 'block';
 
