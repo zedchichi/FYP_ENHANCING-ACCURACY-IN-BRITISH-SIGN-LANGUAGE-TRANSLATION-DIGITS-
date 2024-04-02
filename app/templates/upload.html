@@ -242,6 +242,7 @@
 
         function displayResults(data) {
             let resultContainer = document.getElementById('prediction-result');
+            let imageUID = new Date().getTime() + '_' + Math.random().toString(36).substring(2, 15); // Unique identifier
             resultContainer.innerHTML = `Prediction: ${data.prediction}`; // Update with your actual result format
             resultContainer.style.display = 'block';
         }
