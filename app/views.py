@@ -1,4 +1,6 @@
 import os
+import uuid
+
 import cv2
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify, Blueprint
 from werkzeug.utils import secure_filename
@@ -19,6 +21,9 @@ from tensorflow.keras.models import load_model
 
 import base64
 import time
+
+import os
+import shutil
 
 import tensorflow as tf
 import logging
@@ -67,6 +72,8 @@ def capture():
         os.makedirs(captures_files_path, exist_ok=True)
 
         filename = f"captured_{int(time.time())}.png"
+        image_id = str(uuid.uuid4())
+
         filepath = os.path.join(captures_files_path, filename)
         with open(filepath, 'wb') as file:
             file.write(image_data)
@@ -156,3 +163,46 @@ def translate_image():
     response = jsonify(response_predictions)
     return jsonify(response)
 
+@views_blueprint.route('/submit_feedback', methods=['POST'])
+def handle_feedback():
+    feedback_data = request.get_json()
+    image_id = feedback_data.get('image_id')
+    correct_class = feedback_data.get('correct_class')
+
+    # Initial prediction from stored data
+    initial_folder = determine_initial_folder(image_id)
+
+    # Define the target folder based on correct_class
+    target_folder_path = os.path.join('path/to/classified/images', correct_class)
+    os.makedirs(target_folder_path, exist_ok=True)
+
+    filename = f"{image_id}.png"
+    source_path = os.path.join(initial_folder, filename)
+    target_path = os.path.join(target_folder_path, filename)
+
+    # Move the file
+    shutil.move(source_path, target_path)
+    return jsonify({'message': 'Feedback processed sucessfully'})
+
+
+def move_image_to_class_folder(image_id, class_name):
+    # Define valid class names to prevent arbitrary paths
+    valid_classes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    if class_name not in valid_classes:
+        raise ValueError("Invalid class name provided.")
+
+    # Assuming you have a way to resolve the initial folder based on image_id
+    initial_folder = determine_initial_folder(image_id)
+    source_path = os.path.join(initial_folder, f"{image_id}.png")
+    target_folder_path = os.path.join('/path/to/classified/images', class_name)
+    os.makedirs(target_folder_path, exist_ok=True)
+    target_path = os.path.join(target_folder_path, f"{image_id}.png")
+
+    # Move the file
+    shutil.move(source_path, target_path)
+
+def determine_initial_folder(image_id):
+    if image_id.startswith("cap_"):
+        return app.config['CAPTURED_FOLDER']
+    else:
+        return app.config['UPLOAD_FOLDER']
