@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -257,11 +256,41 @@
                 // Assuming 'data' is the prediction result you want to display
                 // Modify this part based on the structure of 'data'
                 let resultContainer = document.getElementById('prediction-result');
+                let imageUID = new Date().getTime() + '_' + Math.random().toString(36).substring(2, 15); // Unique identifier
                 resultContainer.innerHTML = `Prediction: ${data.prediction}`;
                 resultContainer.style.display = 'block';
 
                 // Show feedback form
                 document.getElementById('feedback-form').style.display = 'block';
+            }
+
+            function submitFeedback(event) {
+                event.preventDefault(); //prevents default submissions
+                let feedbackData = {
+                    image_id: document.getElementId('imageUID').value,
+                    correct_class: document.getElementById('correct-prediction').value, //gets the users correct class
+                };
+
+                fetch('/submit_feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(feedbackData),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Feedback submitted successfully');
+                    //console.log(data.message);
+
+                    //clear the form
+                    document.getElementById('feedbackForm').reset();
+                    // Disable the submit button to prevent duplicate submissions
+                    document.getElementById('submitFeedbackButton').disabled = true;
+                })
+                .catch((error) => {
+                    console.error('Error:', error)
+                });
             }
         });
     </script>
