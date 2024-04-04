@@ -114,6 +114,9 @@
                 font-size: 12px;
             }
         }
+        .overflow-scroll {
+            overflow-y: auto;
+        }
 
         #camera-feed {
             width: 400px;
@@ -134,7 +137,7 @@
         <a href="{{ url_for('views.capture') }}">CAPTURE</a>
     </div>
 
-     <div class="main-content">
+     <div class="main-content overflow-scroll">
          <h1>Capture an Image from your Camera!</h1>
          <video id="camera-feed" autoplay></video>
          <br>
@@ -161,14 +164,25 @@
          <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
              <h2>Prediction Result:</h2>
              <div id="prediction-result" style="display: none"></div>
+             <input type="hidden" id="image-id" name="image-id" value="">
 
 
-            <div class="feedback-section">
-                <label for="yes">Was the prediction correct?</label>
-                <input type="radio" id="yes" name="feedback" value="yes">
-                <label for="yes">Yes</label>
-                <input type="radio" id="no" name="feedback" value="no">
-                <label for="no">No</label>
+<!--            <div class="feedback-section">-->
+<!--                <label for="yes">Was the prediction correct?</label>-->
+<!--                <input type="radio" id="yes" name="feedback" value="yes">-->
+<!--                <label for="yes">Yes</label>-->
+<!--                <input type="radio" id="no" name="feedback" value="no">-->
+<!--                <label for="no">No</label>-->
+<!--            </div>-->
+
+             <div class="feedback-section">
+                <p>Is this the correct class? <strong id="predictedClass">[Class Name]</strong></p>
+                 <button type="button" id="yesButton">Yes</button>
+                 <button type="button" id="noButton">No</button>
+                 <div id="correctionField" style="display:none;">
+                     <input type="text" id="correctClass" placeholder="Enter correct class">
+                     <button type="submit">Submit</button>
+                  </div>
             </div>
 
             <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction" required>
@@ -266,9 +280,13 @@
 
             function submitFeedback(event) {
                 event.preventDefault(); //prevents default submissions
+
+                let imageId = document.getElementById('image-id').value;
+                let correctPrediction = document.getElementById('correct-prediction').value;
+
                 let feedbackData = {
-                    image_id: document.getElementId('imageUID').value,
-                    correct_class: document.getElementById('correct-prediction').value, //gets the users correct class
+                    image_id: imageId,
+                    correct_class: correctPrediction, //gets the users correct class
                 };
 
                 fetch('/submit_feedback', {
@@ -291,6 +309,28 @@
                 .catch((error) => {
                     console.error('Error:', error)
                 });
+            }
+            document.getElementById('noButton').addEventListener('click', function() {
+              document.getElementById('correctionField').style.display = 'block';
+            });
+
+            document.getElementById('yesButton').addEventListener('click', function() {
+              submitFeedback(document.getElementById('predictedClass').innerText);
+            });
+
+            function submitFeedback(correctClass) {
+              const formData = new FormData();
+              formData.append('class', correctClass);
+              // Assuming you have the image data available to append as well
+              formData.append('image', yourImageBlob);
+
+              fetch('/submit-classification', {
+                method: 'POST',
+                body: formData,
+              })
+              .then(response => response.json())
+              .then(data => console.log(data))
+              .catch(error => console.error('Error:', error));
             }
         });
     </script>
