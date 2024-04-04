@@ -37,7 +37,7 @@ tf.compat.v1.logging.set_verbosity(tf.logging.ERROR)
 mobilenet = MobileNet(weights='imagenet')
 # vgg16 = VGG16(weights='imagenet')
 
-vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_Best_Model3.h5'
+vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_FT_Best_Model2.h5'
 custom_vgg16 = load_model(vggmodel_path)
 
 # Defining a blueprint
@@ -45,16 +45,23 @@ views_blueprint = Blueprint('views', __name__, template_folder='templates')
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['CAPTURED_FOLDER'] = 'capture/'
+app.config['CLASSIFIED_FOLDER'] = 'classified'
 CORS(app)
 
-app = Flask(__name__)
-app.config['CAPTURED_FOLDER'] = 'capture/'
-CORS(app)
 
 # @app.route('/')
 @views_blueprint.route('/')
 def home():
     return render_template('home.html')
+
+def save_image(data, folder, prefix):
+    image_id = str(uuid.uuid4())
+    filename = f"{prefix}_{image_id}.png"
+    filepath = os.path.join(folder, filename)
+    with open(filepath, 'wb') as file:
+        file.write(data)
+    return filepath, image_id
 
 @views_blueprint.route('/capture', methods=['GET', 'POST'])
 def capture():
@@ -71,10 +78,10 @@ def capture():
         captures_files_path = app.config['CAPTURED_FOLDER']
         os.makedirs(captures_files_path, exist_ok=True)
 
-        filename = f"captured_{int(time.time())}.png"
-        image_id = str(uuid.uuid4())
-
-        filepath = os.path.join(captures_files_path, filename)
+        # filename = f"captured_{int(time.time())}.png"
+        # image_id = str(uuid.uuid4())
+        filepath, image_id = save_image(image_data, app.config['CAPTURED_FOLDER'], 'cap')
+        # filepath = os.path.join(captures_files_path, filename)
         with open(filepath, 'wb') as file:
             file.write(image_data)
 
@@ -86,7 +93,7 @@ def capture():
         cprediction = custom_vgg16.predict(img_array)
         cpred_result = np.argmax(cprediction[0])
 
-        return jsonify({'prediction': str(cpred_result)})
+        return jsonify({'prediction': str(cpred_result), 'image_id': image_id})
 
 @views_blueprint.route('/capture/<filename>')
 def captured_file(filename):
@@ -105,8 +112,9 @@ def upload():
         filename = secure_filename(file.filename)
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        # filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # file.save(filepath)
+        filepath, image_id = save_image(file.read(), app.config['CAPTURED_FOLDER'], 'upl')
 
         img = image.load_img(filepath, target_size=(224, 224))
         img_array = np.asarray(img)
@@ -120,14 +128,6 @@ def upload():
 
     return jsonify({'error': 'File processing error'}), 500
 
-
-    # if request.method == 'POST':
-    #     file = request.files['file']
-    #     if file:
-    #         filename = secure_filename(file.filename)
-    #         file.save(os.path.join('uploads', filename))
-    #         return redirect(url_for('views.uploaded_file', filename=filename))
-    # return render_template('upload.html')
 
 @views_blueprint.route('/upload/<filename>')
 def uploaded_file(filename):
@@ -166,43 +166,24 @@ def translate_image():
 @views_blueprint.route('/submit_feedback', methods=['POST'])
 def handle_feedback():
     feedback_data = request.get_json()
-    image_id = feedback_data.get('image_id')
-    correct_class = feedback_data.get('correct_class')
-
-    # Initial prediction from stored data
+    image_id = feedback_data['image_id']
+    correct_class = feedback_data['correct_class']
     initial_folder = determine_initial_folder(image_id)
+    move_image_to_class_folder(image_id, correct_class, initial_folder)
+    return jsonify({'message': 'Feedback processed successfully'})
 
-    # Define the target folder based on correct_class
-    target_folder_path = os.path.join('path/to/classified/images', correct_class)
+def move_image_to_class_folder(image_id, class_name, initial_folder):
+    target_folder_path = os.path.join(app.config['CLASSIFIED_FOLDER'], class_name)
     os.makedirs(target_folder_path, exist_ok=True)
-
-    filename = f"{image_id}.png"
-    source_path = os.path.join(initial_folder, filename)
-    target_path = os.path.join(target_folder_path, filename)
-
-    # Move the file
-    shutil.move(source_path, target_path)
-    return jsonify({'message': 'Feedback processed sucessfully'})
-
-
-def move_image_to_class_folder(image_id, class_name):
-    # Define valid class names to prevent arbitrary paths
-    valid_classes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-    if class_name not in valid_classes:
-        raise ValueError("Invalid class name provided.")
-
-    # Assuming you have a way to resolve the initial folder based on image_id
-    initial_folder = determine_initial_folder(image_id)
     source_path = os.path.join(initial_folder, f"{image_id}.png")
-    target_folder_path = os.path.join('/path/to/classified/images', class_name)
-    os.makedirs(target_folder_path, exist_ok=True)
-    target_path = os.path.join(target_folder_path, f"{image_id}.png")
-
-    # Move the file
-    shutil.move(source_path, target_path)
+    shutil.move(source_path, os.path.join(target_folder_path, f"{image_id}.png"))
 
 def determine_initial_folder(image_id):
-    if image_id.startswith("cap_"):
+    prefix = image_id.split('_')[0]
+    if prefix == 'cap':
         return app.config['CAPTURED_FOLDER']
-    else:
+    elif prefix == 'upl':
         return app.config['UPLOAD_FOLDER']
+    else:
+        raise ValueError('Invalid image ID')
+
