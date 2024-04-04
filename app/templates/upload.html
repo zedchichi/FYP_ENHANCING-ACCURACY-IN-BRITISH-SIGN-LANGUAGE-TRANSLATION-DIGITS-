@@ -114,6 +114,9 @@
                 font-size: 12px;
             }
         }
+        .overflow-scroll {
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -123,7 +126,7 @@
         <a href="{{ url_for('views.capture') }}">CAPTURE</a>
     </div>
 
-     <div class="main-content">
+     <div class="main-content overflow-scroll">
          <div class="upload-box" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
              <div class="drag-area" id="drag-area">
                  <p>Drag and drop your image here or click to select a file</p>
@@ -142,11 +145,15 @@
 
          <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
 
+         <div id="loadingIndicator" style="display: none;">Uploading...</div>
+
+         <h2>Prediction Result:</h2>
+         <div id="prediction-result" style="display: none"></div>
 
          <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
-             <h2>Prediction Result:</h2>
-             <div id="prediction-result" style="display: none"></div>
 
+             <input type="hidden" id="image-id" name="image-id" value="">
+             <input type="hidden" id="predicted-class" name="predicted-class" value="">
 
             <div class="feedback-section">
                 <label for="yes">Was the prediction correct?</label>
@@ -160,7 +167,6 @@
             <input type="submit" value="SUBMIT">
          </form>
      </div>
-    <div id="loadingIndicator" style="display: none;">Uploading...</div>
 
 
     <div class="footer">
@@ -213,13 +219,6 @@
             })
             .then(response => response.json())
 
-// <!--            .then(response => {-->
-// <!--                document.getElementById('loadingIndicator').style.display = 'none';-->
-// <!--                if ( !response.ok) {-->
-// <!--                    throw new Error('Network response was not ok');-->
-// <!--                }-->
-// <!--                return response.json();-->
-// <!--            })-->
 
             .then(data => {
                 document.getElementById('loadingIndicator').style.display = 'none';
@@ -242,10 +241,31 @@
 
         function displayResults(data) {
             let resultContainer = document.getElementById('prediction-result');
-            let imageUID = new Date().getTime() + '_' + Math.random().toString(36).substring(2, 15); // Unique identifier
-            resultContainer.innerHTML = `Prediction: ${data.prediction}`; // Update with your actual result format
-            resultContainer.style.display = 'block';
+            // Display the prediction result
+            resultContainer.innerHTML = `Prediction: ${data.prediction}`;
+            document.getElementById('image-id').value = data.image_id; // Assuming your prediction response includes `image_id`
+            document.getElementById('predicted-class').value = data.prediction; // Update the hidden input with the predicted class
         }
+
+        function submitFeedback(event) {
+            event.preventDefault();
+            let feedbackData = {
+                image_id: document.getElementById('image-id').value,
+                feedback_correct: document.querySelector('input[name="feedback"]:checked').value,
+                correct_class: document.getElementById('correct-prediction').value,
+                predicted_class: document.getElementById('predicted-class').value,
+            };
+
+            fetch('/submit_feedback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(feedbackData),
+            })
+            .then(response => response.json())
+            .then(data => alert('Feedback submitted successfully'))
+            .catch(error => console.error('Error:', error));
+        }
+}
     </script>
 </body>
 </html>
