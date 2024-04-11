@@ -5,19 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Page</title>
     <style>
-        body, html {
+       body, html {
             height: 100%;
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
+            background-color: #7774bd;
         }
         body {
             display: flex;
             flex-direction: column;
         }
         .navbar, .footer {
-            background-color: #333;
-            color: #f2f2f2;
+            background-color: #615ea9;
+            color: #ffffff;
             padding: 10px 0;
             text-align: center;
         }
@@ -28,18 +29,19 @@
         .navbar a {
             padding: 14px 16px;
             text-decoration: none;
-            color: #f2f2f2;
+            color: #ffffff;
             font-size: 17px;
+            display: inline-block;
         }
         .navbar a:hover {
             background-color: #ddd;
-            color: black;
+            color: white;
         }
         .main-content {
             flex: 1;
             padding: 20px;
-            background-color: #6f4e37;
-            color: #fff;
+            background-color: #48458b;
+            color: #ffffff;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -48,6 +50,34 @@
             width: 100%;
             box-sizing: border-box;
         }
+        .footer {
+            background-color: transparent;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+        }
+        .content-box {
+            background-color: #353b60; /* Match the color of the content box in the image */
+            width: 80%; /* Adjust as necessary */
+            height: 50%; /* Adjust as necessary */
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 24px; /* Adjust as necessary */
+            border: none; /* Remove any border */
+        }
+
+        .scroll-text {
+            text-align: center;
+            color: #ffffff;
+            font-size: 18px;
+            margin-top: auto; /* This pushes the scroll text to the bottom of the main content */
+            padding: 20px 0; /* Provide some padding for the scroll text */
+        }
+
         .upload-box {
             background: #fff;
             border-radius: 20px;
@@ -120,41 +150,36 @@
     </style>
 </head>
 <body>
-     <div class="navbar">
+
+    <div class="navbar">
         <a href="{{ url_for('views.home') }}">HOME</a>
         <a href="{{ url_for('views.upload') }}">UPLOAD</a>
         <a href="{{ url_for('views.capture') }}">CAPTURE</a>
     </div>
 
      <div class="main-content overflow-scroll">
-         <div class="upload-box" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
-             <div class="drag-area" id="drag-area">
-                 <p>Drag and drop your image here or click to select a file</p>
-                 <button class="btn" onclick="document.getElementById('file-input').click()">Choose File</button>
+        <div class="upload-box" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+            <div class="drag-area" id="drag-area">
+                <p>Drag and drop your image here or click to select a file</p>
+                <button class="btn" onclick="document.getElementById('file-input').click()">Choose File</button>
+                <input type="file" id="file-input" hidden onchange="handleFiles(this.files)">
+            </div>
+            <img id="preview" style="max-width: 200px; display: none;" />
+            <div class="consent-checkbox">
+                <input type="checkbox" id="consent" name="consent" required>
+                <label for="consent">I consent to have my data used for model training</label>
+            </div>
+        </div>
 
-                 <input type="file" id="file-input" hidden onchange="handleFiles(this.files)">
-             </div>
-             <img id="preview" style="max-width: 200px; display: none;" />
+        <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
+        <div id="loadingIndicator" style="display: none;">Uploading...</div>
+        <h2>Prediction Result:</h2>
+        <div id="prediction-result" style="display: none"></div>
 
-
-             <div class="consent-checkbox">
-                 <input type="checkbox" id="consent" name="consent" required>
-                 <label for="consent">I consent to have my data used for model training</label>
-             </div>
-         </div>
-
-         <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
-
-         <div id="loadingIndicator" style="display: none;">Uploading...</div>
-
-         <h2>Prediction Result:</h2>
-         <div id="prediction-result" style="display: none"></div>
-
-         <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
-
-             <input type="hidden" id="image-id" name="image-id" value="">
-             <input type="hidden" id="predicted-class" name="predicted-class" value="">
-
+        <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
+            <input type="hidden" id="image_id" name="image_id" value="">
+            <!-- The predicted-class input is used to store the model's prediction -->
+            <input type="hidden" id="predicted-class" name="predicted-class" value="">
             <div class="feedback-section">
                 <label for="yes">Was the prediction correct?</label>
                 <input type="radio" id="yes" name="feedback" value="yes">
@@ -162,16 +187,12 @@
                 <input type="radio" id="no" name="feedback" value="no">
                 <label for="no">No</label>
             </div>
-
-            <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction" required>
+            <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction">
             <input type="submit" value="SUBMIT">
-         </form>
-     </div>
-
-
-    <div class="footer">
-        <p>Contact me @ never.com</p>
+        </form>
     </div>
+
+
 
     <script>
 
@@ -202,7 +223,7 @@
         function previewFile(file) {
             let preview = document.getElementById('preview');
             preview.src = URL.createObjectURL(file);
-            preview.unload = () => URL.revokeObjectURL(preview.src); // Free memory
+            preview.onload = () => URL.revokeObjectURL(preview.src); // Free memory
             preview.style.display = 'block';
         }
 
@@ -241,19 +262,39 @@
 
         function displayResults(data) {
             let resultContainer = document.getElementById('prediction-result');
-            // Display the prediction result
-            resultContainer.innerHTML = `Prediction: ${data.prediction}`;
-            document.getElementById('image-id').value = data.image_id; // Assuming your prediction response includes `image_id`
-            document.getElementById('predicted-class').value = data.prediction; // Update the hidden input with the predicted class
+            let imageIdInput = document.getElementById('image_id');
+
+             if (data.vgg16_prediction && data.mobilenet_prediction && data.image_id) {
+                    // Display the prediction result
+                    resultContainer.innerHTML = `
+                    <p> VGG16 Prediction: ${data.vgg16_prediction}</p>
+                    <p> MobileNet Prediction: ${data.mobilenet_prediction}</p>
+                    `;
+
+                resultContainer.style.display = 'block'; // Make sure to display the result container
+
+                imageIdInput.value = data.image_id;
+                console.log("Received image_id: " + data.image_id); // Log the image_id to verify
+
+                document.getElementById('image_id').value = data.image_id;
+                document.getElementById('predicted-class').value = data.prediction;
+                document.getElementById('predictButton').style.display = 'none'; // hide the predict button
+            } else {
+                // Handle the lack of data or error here
+                console.error('No prediction or image ID returned from server');
+            }
         }
 
         function submitFeedback(event) {
             event.preventDefault();
+            let imageId = document.getElementById('image_id').value;
+            let feedbackCorrect = document.querySelector('input[name="feedback"]:checked').value === 'yes'; // This is boolean now
+            let correctClass = document.getElementById('correct-prediction').value; // Get user input for the correct class
+
             let feedbackData = {
-                image_id: document.getElementById('image-id').value,
-                feedback_correct: document.querySelector('input[name="feedback"]:checked').value,
-                correct_class: document.getElementById('correct-prediction').value,
-                predicted_class: document.getElementById('predicted-class').value,
+                image_id: imageId,
+                correct_class: correctClass,
+                feedback_correct: feedbackCorrect // Send this as a boolean value
             };
 
             fetch('/submit_feedback', {
@@ -262,10 +303,15 @@
                 body: JSON.stringify(feedbackData),
             })
             .then(response => response.json())
-            .then(data => alert('Feedback submitted successfully'))
+            .then(data => {
+                alert('Feedback submitted successfully')
+                //clear the form
+                    document.getElementById('feedbackForm').reset();
+                    // Disable the submit button to prevent duplicate submissions
+                    //document.getElementById('submitFeedbackButton').disabled = true;
+            })
             .catch(error => console.error('Error:', error));
         }
-}
     </script>
 </body>
 </html>
