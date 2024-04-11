@@ -10,14 +10,15 @@
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
+            background-color: #7774bd;
         }
         body {
             display: flex;
             flex-direction: column;
         }
         .navbar, .footer {
-            background-color: #333;
-            color: #f2f2f2;
+            background-color: #615ea9;
+            color: #ffffff;
             padding: 10px 0;
             text-align: center;
         }
@@ -28,18 +29,19 @@
         .navbar a {
             padding: 14px 16px;
             text-decoration: none;
-            color: #f2f2f2;
+            color: #ffffff;
             font-size: 17px;
+            display: inline-block;
         }
         .navbar a:hover {
             background-color: #ddd;
-            color: black;
+            color: white;
         }
         .main-content {
             flex: 1;
             padding: 20px;
-            background-color: #6f4e37;
-            color: #fff;
+            background-color: #48458b;
+            color: #ffffff;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -47,6 +49,33 @@
             min-height: 0;
             width: 100%;
             box-sizing: border-box;
+        }
+        .footer {
+            background-color: transparent;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+        }
+        .content-box {
+            background-color: #353b60; /* Match the color of the content box in the image */
+            width: 80%; /* Adjust as necessary */
+            height: 50%; /* Adjust as necessary */
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 24px; /* Adjust as necessary */
+            border: none; /* Remove any border */
+        }
+
+        .scroll-text {
+            text-align: center;
+            color: #ffffff;
+            font-size: 18px;
+            margin-top: auto; /* This pushes the scroll text to the bottom of the main content */
+            padding: 20px 0; /* Provide some padding for the scroll text */
         }
         .upload-box {
             background: #fff;
@@ -130,11 +159,11 @@
     </style>
 </head>
 <body>
-
-     <div class="navbar">
+    <div class="navbar">
         <a href="{{ url_for('views.home') }}">HOME</a>
         <a href="{{ url_for('views.upload') }}">UPLOAD</a>
         <a href="{{ url_for('views.capture') }}">CAPTURE</a>
+
     </div>
 
      <div class="main-content overflow-scroll">
@@ -156,44 +185,28 @@
              <label for="consent">I consent to have my data used for model training</label>
          </div>
 
-         <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
-
-         <div id="loadingIndicator" style="display: none;">Processing...</div>
-
+         <button id="predictButton" class="btn" style="display:none;">Predict</button>
+         <div id="loadingIndicator" style="display: none;">Translating...</div>
+         <h2>Prediction Result:</h2>
+         <div id="prediction-result" style="display: none"></div>
 
          <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
-             <h2>Prediction Result:</h2>
-             <div id="prediction-result" style="display: none"></div>
-             <input type="hidden" id="image-id" name="image-id" value="">
-
-
-<!--            <div class="feedback-section">-->
-<!--                <label for="yes">Was the prediction correct?</label>-->
-<!--                <input type="radio" id="yes" name="feedback" value="yes">-->
-<!--                <label for="yes">Yes</label>-->
-<!--                <input type="radio" id="no" name="feedback" value="no">-->
-<!--                <label for="no">No</label>-->
-<!--            </div>-->
-
-             <div class="feedback-section">
-                <p>Is this the correct class? <strong id="predictedClass">[Class Name]</strong></p>
-                 <button type="button" id="yesButton">Yes</button>
-                 <button type="button" id="noButton">No</button>
-                 <div id="correctionField" style="display:none;">
-                     <input type="text" id="correctClass" placeholder="Enter correct class">
-                     <button type="submit">Submit</button>
-                  </div>
+            <input type="hidden" id="image_id" name="image_id" value="">
+            <!-- The predicted-class input is used to store the model's prediction -->
+            <input type="hidden" id="predicted-class" name="predicted-class" value="">
+            <div class="feedback-section">
+                <label for="yes">Was the prediction correct?</label>
+                <input type="radio" id="yes" name="feedback" value="yes">
+                <label for="yes">Yes</label>
+                <input type="radio" id="no" name="feedback" value="no">
+                <label for="no">No</label>
             </div>
-
-            <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction" required>
+            <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction">
             <input type="submit" value="SUBMIT">
-         </form>
+        </form>
      </div>
 
 
-    <div class="footer">
-        <p>Contact me @ never.com</p>
-    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -203,13 +216,22 @@
             var captureButton = document.getElementById('capture-button');
             var predictButton = document.getElementById('predictButton');
 
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.error("MediaDevices API or getUserMedia() not supported by this browser.");
+                alert("Camera access is not supported by your browser.");
+                return; // Stop executing if getUserMedia() is not supported
+            }
+
+
+             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(function(stream) {
                     video.srcObject = stream;
                     video.play();
                 }).catch(function(error) {
                     console.error('Error accessing the camera:', error);
+                    alert("Error accessing the camera: " + error.message);
                 });
+
 
             function retakeImage() {
                 video.style.display = 'block';
@@ -258,79 +280,65 @@
                 .then(response => response.json())
                 .then(data => {
                     displayResults(data);
-                    document.getElementById('loadingIndicator').style.display = 'none';
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     document.getElementById('loadingIndicator').style.display = 'none';
-                });
+                })
             }
 
             function displayResults(data) {
-                // Assuming 'data' is the prediction result you want to display
-                // Modify this part based on the structure of 'data'
-                let resultContainer = document.getElementById('prediction-result');
-                let imageUID = new Date().getTime() + '_' + Math.random().toString(36).substring(2, 15); // Unique identifier
-                resultContainer.innerHTML = `Prediction: ${data.prediction}`;
-                resultContainer.style.display = 'block';
-
-                // Show feedback form
+                /// Show feedback form
                 document.getElementById('feedback-form').style.display = 'block';
+                let resultContainer = document.getElementById('prediction-result');
+                let imageIdInput = document.getElementById('image_id');
+
+                if (data.vgg16_prediction && data.mobilenet_prediction && data.image_id) {
+                    // Display the prediction result
+                    resultContainer.innerHTML = `
+                    <p> VGG16 Prediction: ${data.vgg16_prediction}</p>
+                    <p> MobileNet Prediction: ${data.mobilenet_prediction}</p>
+                    `;
+                    resultContainer.style.display = 'block'; // Make sure to display the result container
+
+                    imageIdInput.value = data.image_id;
+                    console.log("Received image_id: " + data.image_id); // Log the image_id to verify
+
+                    document.getElementById('image_id').value = data.image_id;
+                    document.getElementById('predicted-class').value = data.prediction;
+                    document.getElementById('predictButton').style.display = 'none'; // hide the predict button
+                } else {
+                    // Handle the lack of data or error here
+                    console.error('No prediction or image ID returned from server');
+                }
             }
 
             function submitFeedback(event) {
-                event.preventDefault(); //prevents default submissions
-
-                let imageId = document.getElementById('image-id').value;
-                let correctPrediction = document.getElementById('correct-prediction').value;
+                 event.preventDefault();
+                let imageId = document.getElementById('image_id').value;
+                let feedbackCorrect = document.querySelector('input[name="feedback"]:checked').value === 'yes'; // This is boolean now
+                let correctClass = document.getElementById('correct-prediction').value; // Get user input for the correct class
 
                 let feedbackData = {
                     image_id: imageId,
-                    correct_class: correctPrediction, //gets the users correct class
+                    correct_class: correctClass,
+                    feedback_correct: feedbackCorrect // Send this as a boolean value
                 };
 
                 fetch('/submit_feedback', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(feedbackData),
                 })
                 .then(response => response.json())
                 .then(data => {
-                    alert('Feedback submitted successfully');
-                    //console.log(data.message);
-
+                    alert('Feedback submitted successfully')
                     //clear the form
                     document.getElementById('feedbackForm').reset();
                     // Disable the submit button to prevent duplicate submissions
-                    document.getElementById('submitFeedbackButton').disabled = true;
+                    //document.getElementById('submitFeedbackButton').disabled = true;
                 })
-                .catch((error) => {
-                    console.error('Error:', error)
-                });
-            }
-            document.getElementById('noButton').addEventListener('click', function() {
-              document.getElementById('correctionField').style.display = 'block';
-            });
-
-            document.getElementById('yesButton').addEventListener('click', function() {
-              submitFeedback(document.getElementById('predictedClass').innerText);
-            });
-
-            function submitFeedback(correctClass) {
-              const formData = new FormData();
-              formData.append('class', correctClass);
-              // Assuming you have the image data available to append as well
-              formData.append('image', yourImageBlob);
-
-              fetch('/submit-classification', {
-                method: 'POST',
-                body: formData,
-              })
-              .then(response => response.json())
-              .then(data => console.log(data))
-              .catch(error => console.error('Error:', error));
+                .catch(error => console.error('Error:', error));
             }
         });
     </script>
