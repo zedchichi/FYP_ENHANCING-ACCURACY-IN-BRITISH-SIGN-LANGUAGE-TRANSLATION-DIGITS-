@@ -1,3 +1,4 @@
+import traceback
 import uuid
 
 import cv2
@@ -31,11 +32,6 @@ tf.compat.v1.logging.set_verbosity(tf.logging.ERROR)
 import mediapipe as mp
 from time import time
 
-mobilenet_path = r'C:\Users\anazi\FYP\app\BSL_MobileNet_HD_build_mobilenet_hyper4.h5'
-custom_mobilenet = load_model(mobilenet_path)
-
-vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_FT_HD_Best_Model3.h5'
-custom_vgg16 = load_model(vggmodel_path)
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -44,11 +40,31 @@ hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_co
 # Defining a blueprint
 views_blueprint = Blueprint('views', __name__, template_folder='templates')
 
-# app = Flask(__name__)
-# app.config['UPLOAD_FOLDER'] = 'uploads/'
-# app.config['CAPTURED_FOLDER'] = 'capture/'
-# app.config['CLASSIFIED_FOLDER'] = 'classified'
-# CORS(app)
+# mobilenet_path = r'C:\Users\anazi\FYP\app\BSL_MobileNet_HD_build_mobilenet_hyper4.h5'
+custom_mobilenet = load_model(current_app.config['mobilenet_path'])
+
+# vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_FT_HD_Best_Model3.h5'
+custom_vgg16 = load_model(current_app.config['vggmodel_path'])
+
+@views_blueprint.route('/retrain', methods=['POST'])
+def retrain_models():
+    try:
+        # Make sure retrain_models.py is in the correct directory and importable
+        from .retrain_models import main as retrain_main
+        retrain_main()
+        return jsonify({"message": "Models are being retrained!"}), 200
+    except Exception as e:
+        # Log the full stack trace, this will help identify where the error is happening
+        current_app.logger.error("Error during retraining: %s\nStack Trace: %s", e, traceback.format_exc())
+        return jsonify({"error": "Failed to retrain models", "exception": str(e)}), 500
+def initialize_models():
+    global custom_mobilenet, custom_vgg16
+    custom_mobilenet = load_model(current_app.config['mobilenet_path'])
+    custom_vgg16 = load_model(current_app.config['vggmodel_path'])
+@views_blueprint.route('/reload_models', methods=['POST'])
+def reload_models():
+    initialize_models()
+    return jsonify({"message": "Models reloaded successfully!"})
 
 
 def process_hand_detection(image):
