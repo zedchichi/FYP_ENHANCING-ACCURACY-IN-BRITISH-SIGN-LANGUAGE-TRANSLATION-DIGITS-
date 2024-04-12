@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Capture Page</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <style>
         body, html {
             height: 100%;
@@ -24,7 +25,7 @@
         }
         .navbar {
             top: 0;
-            height: 5%;
+            height: 7%;
         }
         .navbar a {
             padding: 14px 16px;
@@ -57,52 +58,18 @@
             width: 100%;
             text-align: center;
         }
-        .content-box {
-            background-color: #353b60; /* Match the color of the content box in the image */
-            width: 80%; /* Adjust as necessary */
-            height: 50%; /* Adjust as necessary */
-            margin: 20px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffffff;
-            font-size: 24px; /* Adjust as necessary */
-            border: none; /* Remove any border */
+        .fr-box, .capture-box {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            width: 100%; /* Adjust width as necessary */
+            max-width: 700px; /* Maximum width of the boxes */
+            background-color: #7C7AAC;
+            border-radius: 50px; /* Rounded corners */
+            padding: 40px; /* Padding inside the boxes */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); /* Box shadow for a subtle depth effect */
         }
 
-        .scroll-text {
-            text-align: center;
-            color: #ffffff;
-            font-size: 18px;
-            margin-top: auto; /* This pushes the scroll text to the bottom of the main content */
-            padding: 20px 0; /* Provide some padding for the scroll text */
-        }
-        .upload-box {
-            background: #fff;
-            border-radius: 20px;
-            padding: 50px;
-            text-align: center;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            max-width: 600px;
-            margin: auto;
-        }
-        .drag-area {
-            border: 2px dashed #ccc;
-            padding: 30px;
-            cursor: pointer;
-            color: #ccc;
-        }
-        .btn {
-            background-color: #d3a87c;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            color: #fff;
-            margin: 20px 0;
-            cursor: pointer;
-            font-size: 16px;
-        }
+
         .consent-checkbox {
             color: #B1B2B5;
             margin-top: 10px;
@@ -111,11 +78,7 @@
         .consent-checkbox label {
             cursor: pointer;
         }
-        .footer {
-            position: relative;
-            bottom: 0;
-            width: 100%;
-        }
+
 
         /* Responsive styles */
         @media (max-width: 768px) {
@@ -166,181 +129,192 @@
 
     </div>
 
-     <div class="main-content overflow-scroll">
+     <div class="main-content d-flex justify-content-center align-items-center">
          <h1>Capture an Image from your Camera!</h1>
-         <video id="camera-feed" autoplay></video>
-         <br>
-         <button id="capture-button">Capture Image</button>
-         <br>
-         <canvas id="captured-image" style="display: none;"></canvas>
-         <br>
-         <button id="retake-button" class="btn" style="display:none;" onclick="retakeImage()">Retake Image</button>
-         <br>
 
-         <div id="translation-results"></div>
-         <img id="translated-image" src="" alt="Translated Image" style="display: none;">
+         <div class="container">
+             <div class="row">
+                 <div class="col-lg-6 d-flex justify-content-center">
+                     <div class="fr-box">
+                         <h2>Prediction Result:</h2>
+                         <div id="prediction-result" style="display: none"></div>
 
-         <div class="consent-checkbox">
-             <input type="checkbox" id="consent" name="consent" required>
-             <label for="consent">I consent to have my data used for model training</label>
+                         <form class="feedback-form w-100" id="feedback-form" onsubmit="submitFeedback(event)">
+                            <input type="hidden" id="image_id" name="image_id" value="">
+                            <!-- The predicted-class input is used to store the model's prediction -->
+                             <input type="hidden" id="predicted-class" name="predicted-class" value="">
+
+
+                             <div class="feedback-section">
+                                <h3>VGG16 Feedback</h3>
+                                 <div class="form-group">
+                                    <label for="vgg-correct">Was the VGG16 prediction correct?</label>
+                                    <div>
+                                        <input type="radio" id="vgg-yes" name="feedback-vgg" value="yes">
+                                        <label for="vgg-yes">Yes</label>
+                                    </div>
+                                    <div>
+                                        <input type="radio" id="vgg-no" name="feedback-vgg" value="no">
+                                        <label for="vgg-no">No</label>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <input type="text" class="form-control" id="correct-prediction-vgg" name="correct-prediction-vgg" placeholder="Correct VGG16 Prediction">
+                                    </div>
+                                </div>
+
+                                <h3 class="row mt-3">MobileNet Feedback</h3>
+                                <div class="form-group">
+                                    <label for="mobilenet-correct">Was the MobileNet prediction correct?</label>
+                                    <div>
+                                        <input type="radio" id="mobilenet-yes" name="feedback-mobilenet" value="yes">
+                                        <label for="mobilenet-yes">Yes</label>
+                                    </div>
+                                    <div>
+                                        <input type="radio" id="mobilenet-no" name="feedback-mobilenet" value="no">
+                                        <label for="mobilenet-no">No</label>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="col">
+                                        <input type="text" class="form-control" id="correct-prediction-mobilenet" name="correct-prediction-mobilenet" placeholder="Correct MobileNet Prediction">
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="row mt-3">
+                                 <input type="submit" value="SUBMIT FEEDBACK">
+                             </div>
+                        </form>
+                     </div>
+                 </div>
+
+                 <div class="col-lg-6 d-flex justify-content-center">
+                     <div class="capture-box">
+                         <video id="camera-feed" autoplay></video>
+                         <button id="capture-button" onclick="captureImage()">Capture Image</button>
+                         <canvas id="captured-image" style="display: none;"></canvas>
+                         <button id="retake-button" class="btn" style="display:none;" onclick="retakeImage()">Retake Image</button>
+                         <br>
+
+                         <div class="consent-checkbox">
+                             <input type="checkbox" id="consent" name="consent" required>
+                             <label for="consent">I consent to have my data used for model training</label>
+                         </div>
+
+                         <button id="predictButton" class="btn" style="display:none;">Predict</button>
+                         <div id="loadingIndicator" style="display: none;">Translating...</div>
+                     </div>
+
+                 </div>
+
+             </div>
          </div>
 
-         <button id="predictButton" class="btn" style="display:none;">Predict</button>
-         <div id="loadingIndicator" style="display: none;">Translating...</div>
-         <h2>Prediction Result:</h2>
-         <div id="prediction-result" style="display: none"></div>
-
-         <form class="feedback-form" id="feedback-form" onsubmit="submitFeedback(event)">
-            <input type="hidden" id="image_id" name="image_id" value="">
-            <!-- The predicted-class input is used to store the model's prediction -->
-            <input type="hidden" id="predicted-class" name="predicted-class" value="">
-            <div class="feedback-section">
-                <label for="yes">Was the prediction correct?</label>
-                <input type="radio" id="yes" name="feedback" value="yes">
-                <label for="yes">Yes</label>
-                <input type="radio" id="no" name="feedback" value="no">
-                <label for="no">No</label>
-            </div>
-            <input type="text" id="correct-prediction" name="correct-prediction" placeholder="Correct Prediction">
-            <input type="submit" value="SUBMIT">
-        </form>
+<!--         <div id="translation-results"></div>-->
+<!--         <img id="translated-image" src="" alt="Translated Image" style="display: none;">-->
+<!--     -->
      </div>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
 
 
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Ensure elements are ready before attaching handlers
-            var video = document.getElementById('camera-feed');
-            var canvas = document.getElementById('captured-image');
-            var captureButton = document.getElementById('capture-button');
-            var predictButton = document.getElementById('predictButton');
+         document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('camera-feed');
+            const canvas = document.getElementById('captured-image');
+            const captureButton = document.getElementById('capture-button');
+            const feedbackForm = document.getElementById('feedback-form');
 
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                console.error("MediaDevices API or getUserMedia() not supported by this browser.");
-                alert("Camera access is not supported by your browser.");
-                return; // Stop executing if getUserMedia() is not supported
-            }
-
-
-             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then(function(stream) {
-                    video.srcObject = stream;
-                    video.play();
-                }).catch(function(error) {
-                    console.error('Error accessing the camera:', error);
-                    alert("Error accessing the camera: " + error.message);
-                });
-
-
-            function retakeImage() {
-                video.style.display = 'block';
-
-                //hide canvas and clear its content
-                var ctx = canvas.getContext('2d');
-                ctx.clearRect(video, 0, 0, canvas.width, canvas.height);
-
-                canvas.style.display = 'none';
-                predictButton.style.display = 'none';
-                document.getElementById('retake-button').style.display = 'none';
-                document.getElementById('prediction-result').style.display = 'none';
-                document.getElementById('feedback-form').style.display = 'none';
+            function setupCamera() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Media Devices not supported by your browser. Try a different browser.');
+                    return;
+                }
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        video.srcObject = stream;
+                        video.play();
+                    })
+                    .catch(function(error) {
+                        console.error("Failed to get a stream due to", error);
+                    });
             }
 
             captureButton.addEventListener('click', function() {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                canvas.style.display = 'block'; // Show the captured image
-
-                video.style.display = 'none'; //Hide the camera feed
-
-                // Show the predict button
-                predictButton.style.display = 'block';
-
-                //show retake button after capturing
-                document.getElementById('retake-button').style.display = 'block';
+                canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                canvas.toBlob(function(blob) {
+                    let file = new File([blob], 'capture.png', {type: 'image/png', lastModified: Date.now()});
+                    let formData = new FormData();
+                    formData.append('image', file);
+                    uploadFile(formData);
+                }, 'image/png');
             });
 
-
-            predictButton.addEventListener('click', function() {
-                sendImageForPrediction(canvas.toDataURL('image/png'));
-            });
-
-            function sendImageForPrediction(imageData) {
+            function uploadFile(formData) {
                 document.getElementById('loadingIndicator').style.display = 'block';
-
                 fetch('/capture', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({image: imageData})
+                    body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
                     displayResults(data);
                 })
                 .catch(error => {
-                    console.error('Error:', error);
                     document.getElementById('loadingIndicator').style.display = 'none';
-                })
+                    console.error('Error:', error);
+                });
             }
 
             function displayResults(data) {
-                /// Show feedback form
-                document.getElementById('feedback-form').style.display = 'block';
                 let resultContainer = document.getElementById('prediction-result');
-                let imageIdInput = document.getElementById('image_id');
-
-                if (data.vgg16_prediction && data.mobilenet_prediction && data.image_id) {
-                    // Display the prediction result
-                    resultContainer.innerHTML = `
-                    <p> VGG16 Prediction: ${data.vgg16_prediction}</p>
-                    <p> MobileNet Prediction: ${data.mobilenet_prediction}</p>
-                    `;
-                    resultContainer.style.display = 'block'; // Make sure to display the result container
-
-                    imageIdInput.value = data.image_id;
-                    console.log("Received image_id: " + data.image_id); // Log the image_id to verify
-
-                    document.getElementById('image_id').value = data.image_id;
-                    document.getElementById('predicted-class').value = data.prediction;
-                    document.getElementById('predictButton').style.display = 'none'; // hide the predict button
-                } else {
-                    // Handle the lack of data or error here
-                    console.error('No prediction or image ID returned from server');
-                }
+                resultContainer.innerHTML = `<p>MobileNet Prediction: ${data.mobilenet_prediction} (Confidence: ${data.mobilenet_confidence.toFixed(2)})</p>
+                                             <p>VGG16 Prediction: ${data.vgg16_prediction} (Confidence: ${data.vgg16_confidence.toFixed(2)})</p>`;
+                resultContainer.style.display = 'block';
+                document.getElementById('image_id').value = data.image_id;
+                document.getElementById('predicted-class').value = data.mobilenet_prediction; // assuming MobileNet is the default
             }
 
-            function submitFeedback(event) {
-                 event.preventDefault();
-                let imageId = document.getElementById('image_id').value;
-                let feedbackCorrect = document.querySelector('input[name="feedback"]:checked').value === 'yes'; // This is boolean now
-                let correctClass = document.getElementById('correct-prediction').value; // Get user input for the correct class
+            feedbackForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Stop the form from submitting normally
 
+                let formData = new FormData(feedbackForm);
                 let feedbackData = {
-                    image_id: imageId,
-                    correct_class: correctClass,
-                    feedback_correct: feedbackCorrect // Send this as a boolean value
+                    image_id: formData.get('image_id'),
+                    correct_class_vgg: formData.get('correct-prediction-vgg'),
+                    correct_class_mobilenet: formData.get('correct-prediction-mobilenet'),
+                    feedback_correct_vgg: formData.get('feedback-vgg') === 'yes',
+                    feedback_correct_mobilenet: formData.get('feedback-mobilenet') === 'yes'
                 };
 
                 fetch('/submit_feedback', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(feedbackData),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(feedbackData)
                 })
                 .then(response => response.json())
                 .then(data => {
-                    alert('Feedback submitted successfully')
-                    //clear the form
-                    document.getElementById('feedbackForm').reset();
-                    // Disable the submit button to prevent duplicate submissions
-                    //document.getElementById('submitFeedbackButton').disabled = true;
+                    alert('Feedback submitted successfully!');
+                    console.log(data);
                 })
-                .catch(error => console.error('Error:', error));
-            }
+                .catch(error => {
+                    console.error('Error submitting feedback:', error);
+                });
+            });
+
+            setupCamera();
         });
+
     </script>
 </body>
 </html>
