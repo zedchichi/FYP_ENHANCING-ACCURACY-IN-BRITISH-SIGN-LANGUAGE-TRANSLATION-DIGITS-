@@ -12,11 +12,10 @@
             padding: 0;
             font-family: Arial, sans-serif;
             background-color: #7774bd;
-        }
-        body {
             display: flex;
             flex-direction: column;
         }
+
         .navbar, .footer {
             background-color: #615ea9;
             color: #ffffff;
@@ -35,13 +34,11 @@
             display: inline-block;
         }
         .navbar a:hover {
-            background-color: #ddd;
-            color: white;
+            background-color: #cecdf7;
         }
         .main-content {
             flex: 1;
             padding: 20px;
-            background-color: #48458b;
             color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -305,7 +302,8 @@
                 .then(response => response.json())
                 .then(data => {
                     alert('Feedback submitted successfully!');
-                    console.log(data);
+                    console.log(data); // Log the response data
+                    // Optionally clear the form or give further notifications to the user
                 })
                 .catch(error => {
                     console.error('Error submitting feedback:', error);
