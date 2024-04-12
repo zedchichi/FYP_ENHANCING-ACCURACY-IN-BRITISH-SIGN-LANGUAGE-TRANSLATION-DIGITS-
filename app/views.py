@@ -99,53 +99,58 @@ def save_image(data, folder, prefix):
     image_id = str(uuid.uuid4())
     filename = f"{prefix}_{image_id}.png"
 
-    #ensure filename ends with .png only once
-    if not filename.endswith(".png"):
-        filename += ".png"
 
     filepath = os.path.join(folder, filename)
     with open(filepath, 'wb') as file:
         file.write(data)
     return filepath, filename
 
+
 @views_blueprint.route('/capture', methods=['GET', 'POST'])
 def capture():
     if request.method == 'GET':
-       return render_template('capture.html')
-    elif request.method == 'POST':
-        if 'image' not in request.json:
-            return jsonify({'error': 'No image data provides'}), 400
+        return render_template('capture.html')
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image data provided'}), 400
 
-        image_data = request.json['image']
-        image_data = re.sub('^data:image/.+;base64,', '', image_data)
-        image_data = base64.b64decode(image_data)
-
+    image_file = request.files['image']
+    if image_file:
+        image_data = image_file.read()
         captures_files_path = current_app.config['CAPTURED_FOLDER']
         os.makedirs(captures_files_path, exist_ok=True)
 
-        filepath, image_id = save_image(image_data, current_app.config['CAPTURED_FOLDER'], 'cap')
+        filepath, image_id = save_image(image_data, captures_files_path, 'cap')
 
         img = cv2.imread(filepath)
         hand_img = process_hand_detection(img)
 
         if hand_img is not None:
-            cv2.imwrite(filepath, hand_img) #save cropped hand for classification
+            cv2.imwrite(filepath, hand_img)  # save cropped hand for classification
             img_for_classification = image.load_img(filepath, target_size=(224, 224))
             img_array = np.asarray(img_for_classification)
             img_array = np.expand_dims(img_array, axis=0)
             img_array = img_array / 255.0
 
-            cprediction = custom_vgg16.predict(img_array)
-            cpred_result = np.argmax(cprediction[0])
+            mobilenet_prediction = custom_mobilenet.predict(img_array)
+            vgg_prediction = custom_vgg16.predict(img_array)
 
-            cprediction2 = custom_mobilenet(img_array)
-            cpred2_result = np.argmax(cprediction2[0])
+            mobilenet_pred_class = np.argmax(mobilenet_prediction[0])
+            mobilenet_confidence = np.max(mobilenet_prediction[0])
 
-            return jsonify({'vgg16_prediction': str(cpred_result), 'mobilenet_prediction': str(cpred2_result), 'image_id': image_id})
+            vgg_pred_class = np.argmax(vgg_prediction[0])
+            vgg_confidence = np.max(vgg_prediction[0])
+
+            return jsonify({
+                'mobilenet_prediction': str(mobilenet_pred_class),
+                'mobilenet_confidence': float(mobilenet_confidence),
+                'vgg16_prediction': str(vgg_pred_class),
+                'vgg16_confidence': float(vgg_confidence),
+                'image_id': image_id
+            })
         else:
             return jsonify({'error': 'No hand detected'})
-    return jsonify({'error': 'File processing error'}), 500
 
+    return jsonify({'error': 'File processing error'}), 500
 @views_blueprint.route('/capture/<filename>')
 def captured_file(filename):
     return send_from_directory(current_app.config['CAPTURED_FOLDER'], filename)
@@ -227,32 +232,41 @@ def translate_image():
 def handle_feedback():
     feedback_data = request.get_json()
     image_id = feedback_data['image_id']  # This now includes the prefix and the '.png'
-    correct_class = feedback_data['correct_class']
-    feedback_correct = feedback_data['feedback_correct']
+    correct_class_vgg = feedback_data['correct_class_vgg']
+    correct_class_mobilenet = feedback_data['correct_class_mobilenet']
+    feedback_correct_vgg = feedback_data['feedback_correct_vgg']
+    feedback_correct_mobilenet = feedback_data['feedback_correct_mobilenet']
 
     # Log feedback for improvement purposes
-    print(f"Feedback received: Image ID {image_id}, Correct Class: {correct_class}, Was Correct: {feedback_correct}")
+    print(
+        f"Feedback received: Image ID {image_id}, VGG Correct Class: {correct_class_vgg}, VGG Was Correct: {feedback_correct_vgg}")
+    print(
+        f"Feedback received: Image ID {image_id}, MobileNet Correct Class: {correct_class_mobilenet}, MobileNet Was Correct: {feedback_correct_mobilenet}")
 
-    # Choose the target folder based on the correctness of the prediction
-    if feedback_correct:
-        target_folder = os.path.join(current_app.config['CLASSIFIED_FOLDER'], 'correct_predictions')
-    else:
-        target_folder = os.path.join(current_app.config['CLASSIFIED_FOLDER'], 'incorrect_predictions', correct_class)
+    # Define target folders for VGG and MobileNet based on feedback correctness
+    target_folder_vgg = os.path.join(current_app.config['VGG_CLASSIFIED'],
+                                     'correct' if feedback_correct_vgg else 'incorrect', correct_class_vgg)
+    target_folder_mobilenet = os.path.join(current_app.config['MOBILENET_CLASSIFIED'],
+                                           'correct' if feedback_correct_mobilenet else 'incorrect',
+                                           correct_class_mobilenet)
 
-    os.makedirs(target_folder, exist_ok=True)
+    os.makedirs(target_folder_vgg, exist_ok=True)
+    os.makedirs(target_folder_mobilenet, exist_ok=True)
 
-    # Use the full image_id (which includes prefix and .png) directly
-    source_path = os.path.join(determine_initial_folder(image_id), image_id)
+    # Retrieve the initial folder and copy the image to each model's feedback directory
+    initial_folder = determine_initial_folder(image_id)
+    source_path = os.path.join(initial_folder, image_id)
 
     try:
-        shutil.move(source_path, os.path.join(target_folder, image_id))
+        # Copy file to VGG classified folder
+        shutil.copy(source_path, os.path.join(target_folder_vgg, image_id))
+        # Move file to MobileNet classified folder (to avoid having duplicate files)
+        shutil.move(source_path, os.path.join(target_folder_mobilenet, image_id))
     except FileNotFoundError as e:
         print(f"Error moving file: {e}")
         return jsonify({'error': 'File not found'}), 404
 
-    return jsonify({'message': 'Feedback processed successfully'})
-
-
+    return jsonify({'message': 'Feedback processed successfully for both models'})
 def move_image_to_class_folder(image_id, class_name, initial_folder):
     target_folder_path = os.path.join(current_app.config['CLASSIFIED_FOLDER'], class_name)
     os.makedirs(target_folder_path, exist_ok=True)
@@ -260,12 +274,7 @@ def move_image_to_class_folder(image_id, class_name, initial_folder):
     shutil.move(source_path, os.path.join(target_folder_path, f"{image_id}.png"))
 
 def determine_initial_folder(image_id):
-    try:
-        image_id_without_extension = image_id.rsplit('.png', 1)[0]
-        prefix = image_id_without_extension.split('_')[0]
-    except IndexError:
-        current_app.logger.error(f"Invalid image ID format: {image_id}")
-        raise ValueError('Invalid image ID format')
+    prefix = image_id.split('_')[0]
     if prefix == 'cap':
         return current_app.config['CAPTURED_FOLDER']
     elif prefix == 'upl':
@@ -273,4 +282,3 @@ def determine_initial_folder(image_id):
     else:
         current_app.logger.error(f"Invalid image ID prefix: {image_id}")
         raise ValueError('Invalid image ID prefix')
-
