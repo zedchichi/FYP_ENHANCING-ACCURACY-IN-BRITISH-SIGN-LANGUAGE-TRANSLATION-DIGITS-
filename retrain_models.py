@@ -1,41 +1,105 @@
+import mediapipe as mp
+from tensorflow.keras.applications import MobileNet, VGG16
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications.mobilenet import preprocess_input as mobilenet_preprocess_input
-from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess_input
-from tensorflow.keras.models import load_model
-import os
+import tensorflow as tf
 
-def retrain_model(model_path, data_dir, preprocess_input_func, model_save_path):
-    try:
-        model = load_model(model_path)
-        datagen = ImageDataGenerator(preprocessing_function=preprocess_input_func)
 
-        generator = datagen.flow_from_directory(
-            data_dir,
-            target_size=(224, 224),
-            batch_size=10,  # Reduced batch size to ensure it fits in memory
-            class_mode='categorical'
-        )
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5)
 
-        # Train the model
-        model.fit(generator, epochs=5)
-        # Save the updated model
-        model.save(model_save_path)
-        return "Training succeeded"
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return str(e)
 
-def main():
-    # Define paths
-    mobilenet_data_dir = r'C:\Users\anazi\FYP\classified\mobilenet'
-    vgg_data_dir = r'C:\Users\anazi\FYP\classified\vgg'
-    mobilenet_model_path = r'C:\Users\anazi\FYP\app\BSL_MobileNet_HD_build_mobilenet_hyper4.h5'
-    vgg_model_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_FT_HD_Best_Model3.h5'
-    updated_mobilenet_path = r'C:\Users\anazi\FYP\app\updated_mobilenet_model.h5'
-    updated_vgg_path = r'C:\Users\anazi\FYP\app\updated_vgg_model.h5'
+def retrain_mobilenet(model, train_dir, val_dir, save_path):
+    print("Retraining MobileNet...")
 
-    print(retrain_model(mobilenet_model_path, mobilenet_data_dir, mobilenet_preprocess_input, updated_mobilenet_path))
-    print(retrain_model(vgg_model_path, vgg_data_dir, vgg_preprocess_input, updated_vgg_path))
+    # Assume 'model' is the MobileNet model already loaded with custom top layers and weights
+    # Now let's make all layers trainable for fine-tuning
+    for layer in model.layers:
+        layer.trainable = True
 
-if __name__ == "__main__":
-    main()
+    # Compile the model with a small learning rate
+    model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+    # Setup data generators
+    train_datagen = ImageDataGenerator(preprocessing_function=tf.keras.applications.mobilenet.preprocess_input,
+                                       rotation_range=40,
+                                       width_shift_range=0.2,
+                                       height_shift_range=0.2,
+                                       shear_range=0.2,
+                                       zoom_range=0.2,
+                                       horizontal_flip=True,
+                                       fill_mode='nearest')
+
+    val_datagen = ImageDataGenerator(preprocessing_function=tf.keras.applications.mobilenet.preprocess_input)
+
+    train_generator = train_datagen.flow_from_directory(
+        train_dir,
+        target_size=(224, 224),
+        batch_size=32,
+        class_mode='categorical')
+
+    validation_generator = val_datagen.flow_from_directory(
+        val_dir,
+        target_size=(224, 224),
+        batch_size=32,
+        class_mode='categorical')
+
+    # Fit the model
+    model.fit(
+        train_generator,
+        steps_per_epoch=10,  # adjust based on the size of your dataset
+        epochs=5,            # can be changed based on how much fine-tuning is needed
+        validation_data=validation_generator,
+        validation_steps=5)  # adjust based on the size of your validation set
+
+    # Save the retrained model
+    model.save(save_path)
+    print("MobileNet Retrained and saved at {}".format(save_path))
+
+def retrain_vgg16(model, train_dir, val_dir, save_path):
+    print("Retraining VGG16...")
+
+    # Making all layers trainable for fine-tuning
+    for layer in model.layers:
+        layer.trainable = True
+
+    # Compile the model with a small learning rate
+    model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+    # Setup data generators
+    train_datagen = ImageDataGenerator(preprocessing_function=tf.keras.applications.vgg16.preprocess_input,
+                                       rotation_range=40,
+                                       width_shift_range=0.2,
+                                       height_shift_range=0.2,
+                                       shear_range=0.2,
+                                       zoom_range=0.2,
+                                       horizontal_flip=True,
+                                       fill_mode='nearest')
+
+    val_datagen = ImageDataGenerator(preprocessing_function=tf.keras.applications.vgg16.preprocess_input)
+
+    train_generator = train_datagen.flow_from_directory(
+        train_dir,
+        target_size=(224, 224),
+        batch_size=32,
+        class_mode='categorical')
+
+    validation_generator = val_datagen.flow_from_directory(
+        val_dir,
+        target_size=(224, 224),
+        batch_size=32,
+        class_mode='categorical')
+
+    # Fit the model
+    model.fit(
+        train_generator,
+        steps_per_epoch=10,
+        epochs=5,
+        validation_data=validation_generator,
+        validation_steps=5)
+
+    # Save the retrained model
+    model.save(save_path)
+    print("VGG16 Retrained and saved at {}".format(save_path))

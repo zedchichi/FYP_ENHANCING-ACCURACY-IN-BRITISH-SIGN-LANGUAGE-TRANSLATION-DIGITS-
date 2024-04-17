@@ -67,6 +67,12 @@
             border: none; /* Remove any border */
         }
 
+        video {
+            width: 100%
+            height: 100%;
+            display: block;
+        }
+
         .scroll-text {
             text-align: center;
             color: #ffffff;
@@ -85,8 +91,9 @@
     </div>
 
     <div class="main-content">
-         <div class="content-box">
-            SLIDE SHOW??
+         <div class="content-box" id="video-slider">
+<!--             <video src="app/assets/videos/Uploading - Copy.mp4" id="video1" controls></video>-->
+
         </div>
         <button onclick="retrainModels()">Retrain Models</button>
         <p class="scroll-text">Scroll down</p>
@@ -112,6 +119,18 @@
             .then(data => alert(data.message))
             .catch(error => console.error('Error:', error));
         }
+
+        let currentVideoIndex = 0;
+        const videos = document.querySelectorAll('#video-slider video');
+        const totalVideos = videos.length;
+
+        videos.forEach((video, index) => {
+            video.addEventListener('ended', () => {
+                videos[currentVideoIndex].style.display = 'none';
+                currentVideoIndex = (currentVideoIndex + 1) % totalVideos;
+                videos[currentVideoIndex].style.display = 'block';
+            });
+        });
     </script>
 </body>
 </html>

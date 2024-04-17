@@ -1,71 +1,45 @@
-import traceback
-import uuid
-
+from flask import current_app, Blueprint, render_template, request, send_from_directory, jsonify
 import cv2
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify, Blueprint, current_app
-from werkzeug.utils import secure_filename
 from keras.preprocessing import image
+from tensorflow.keras.models import load_model
 import numpy as np
+import os
+import uuid
+import shutil
+import tensorflow as tf
+from werkzeug.utils import secure_filename
 
-import re
-from io import BytesIO
-from PIL import Image
-
-
+from retrain_models import retrain_mobilenet, retrain_vgg16
 from keras.applications.mobilenet import decode_predictions
 from tensorflow.keras.models import load_model
-
-import base64
 
 import os
 import shutil
 
 import tensorflow as tf
 
+from retrain_models import retrain_mobilenet, retrain_vgg16
 
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # Suppress deprecated warnings
 
-# If you're using TensorFlow 2.x and still seeing deprecation warnings, you might need to adjust the import or logging setup:
 import tensorflow.compat.v1 as tf
 tf.compat.v1.logging.set_verbosity(tf.logging.ERROR)
 
 import mediapipe as mp
-from time import time
-
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 
-# Defining a blueprint
 views_blueprint = Blueprint('views', __name__, template_folder='templates')
 
-# mobilenet_path = r'C:\Users\anazi\FYP\app\BSL_MobileNet_HD_build_mobilenet_hyper4.h5'
 custom_mobilenet = load_model(current_app.config['mobilenet_path'])
 
-# vggmodel_path = r'C:\Users\anazi\FYP\app\BSL_VGG16_Cus_FT_HD_Best_Model3.h5'
 custom_vgg16 = load_model(current_app.config['vggmodel_path'])
 
-@views_blueprint.route('/retrain', methods=['POST'])
-def retrain_models():
-    try:
-        # Make sure retrain_models.py is in the correct directory and importable
-        from .retrain_models import main as retrain_main
-        retrain_main()
-        return jsonify({"message": "Models are being retrained!"}), 200
-    except Exception as e:
-        # Log the full stack trace, this will help identify where the error is happening
-        current_app.logger.error("Error during retraining: %s\nStack Trace: %s", e, traceback.format_exc())
-        return jsonify({"error": "Failed to retrain models", "exception": str(e)}), 500
-def initialize_models():
-    global custom_mobilenet, custom_vgg16
-    custom_mobilenet = load_model(current_app.config['mobilenet_path'])
-    custom_vgg16 = load_model(current_app.config['vggmodel_path'])
-@views_blueprint.route('/reload_models', methods=['POST'])
-def reload_models():
-    initialize_models()
-    return jsonify({"message": "Models reloaded successfully!"})
-
+@views_blueprint.route('/')
+def home():
+    return render_template('home.html')
 
 def process_hand_detection(image):
     # Convert the image from BGR (OpenCV format) to RGB.
@@ -77,7 +51,7 @@ def process_hand_detection(image):
     if not results.multi_hand_landmarks:
         return None  # No hands detected
 
-    # Assuming only the first hand is of interest.
+    # Detect only 1 hand
     for hand_landmarks in results.multi_hand_landmarks:
         # Assuming landmarks are already normalized.
         image_height, image_width, _ = image.shape
@@ -86,7 +60,7 @@ def process_hand_detection(image):
         x_min, x_max = min(x_coords), max(x_coords)
         y_min, y_max = min(y_coords), max(y_coords)
 
-        # Optionally, expand the bounding box here by a small margin.
+        # expand the bounding box here by a small margin.
         margin = 10  # Adjust as needed.
         x_min = max(0, x_min - margin)
         x_max = min(image_width, x_max + margin)
@@ -97,18 +71,8 @@ def process_hand_detection(image):
         hand_img = image[y_min:y_max, x_min:x_max]
         return hand_img
 
-    # If execution reaches this point, no hands were processed (unexpected).
+    # no hands were found.
     return None
-
-# @views_blueprint.route('/')
-# def index():
-#     return render_template('index.html')
-
-# @app.route('/')
-@views_blueprint.route('/')
-def home():
-    return render_template('home.html')
-
 
 def save_image(data, folder, prefix):
     # uniqe id
@@ -215,34 +179,6 @@ def uploaded_file(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
 
 
-@views_blueprint.route('/translate-image', methods=['POST'])
-def translate_image():
-    # Decode the image from base64
-    image_data = request.data.decode('utf-8')
-    image_data = re.sub('^data:image/.+;base64,', '', image_data)
-    img = Image.open(BytesIO(base64.b64decode(image_data)))
-    
-    # Preprocess the image for MobileNet and VGG16
-    img = img.resize((224, 224))
-    img_array = np.asarray(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0
-
-    # Make predictions with MobileNet and VGG16
-    mobilenet_predictions = custom_mobilenet.predict(img_array)
-    vgg16_predictions = custom_vgg16.predict(img_array)
-
-   # Decode the predictions
-    decoded_mobilenet_predictions = decode_predictions(mobilenet_predictions, top=3)[0]
-    decoded_vgg16_predictions = decode_predictions(vgg16_predictions, top=3)[0]
-
-# Format the predictions for response
-    response_predictions = {
-        'mobilenet': [(pred[1], float(pred[2])) for pred in decoded_mobilenet_predictions],
-        'vgg16': [(pred[1], float(pred[2])) for pred in decoded_vgg16_predictions]
-    }
-    response = jsonify(response_predictions)
-    return jsonify(response)
 
 @views_blueprint.route('/submit_feedback', methods=['POST'])
 def handle_feedback():
@@ -283,11 +219,6 @@ def handle_feedback():
         return jsonify({'error': 'File not found'}), 404
 
     return jsonify({'message': 'Feedback processed successfully for both models'})
-def move_image_to_class_folder(image_id, class_name, initial_folder):
-    target_folder_path = os.path.join(current_app.config['CLASSIFIED_FOLDER'], class_name)
-    os.makedirs(target_folder_path, exist_ok=True)
-    source_path = os.path.join(initial_folder, f"{image_id}.png")
-    shutil.move(source_path, os.path.join(target_folder_path, f"{image_id}.png"))
 
 def determine_initial_folder(image_id):
     prefix = image_id.split('_')[0]
@@ -298,3 +229,43 @@ def determine_initial_folder(image_id):
     else:
         current_app.logger.error(f"Invalid image ID prefix: {image_id}")
         raise ValueError('Invalid image ID prefix')
+
+def initialize_models():
+    global custom_mobilenet, custom_vgg16
+    custom_mobilenet = load_model(current_app.config['mobilenet_path'])
+    custom_vgg16 = load_model(current_app.config['vggmodel_path'])
+    print("Models initialized successfully.")
+
+def load_models():
+    global custom_mobilenet, custom_vgg16
+    if not custom_mobilenet:
+        custom_mobilenet = load_model(current_app.config['mobilenet_path'])
+    if not custom_vgg16:
+        custom_vgg16 = load_model(current_app.config['vggmodel_path'])
+
+@views_blueprint.route('/reload_models', methods=['POST'])
+def reload_models():
+    load_models()
+    return jsonify({"message": "Models reloaded successfully!"})
+
+@views_blueprint.route('/retrain', methods=['POST'])
+def retrain_models():
+    if 'custom_mobilenet' not in globals() or 'custom_vgg16' not in globals():
+        return jsonify({"error": "Models are not loaded"}), 500
+    mobilenet_save_path = current_app.config['mobilenet_save_path']
+    vgg_save_path = current_app.config['vgg_save_path']
+
+    retrain_mobilenet(
+        custom_mobilenet,
+        train_dir=current_app.config['MOBILENET_INCORRECT'],
+        val_dir=current_app.config['VGG_INCORRECT'],
+        save_path=mobilenet_save_path
+    )
+    retrain_vgg16(
+        custom_vgg16,
+        train_dir=current_app.config['VGG_INCORRECT'],
+        val_dir=current_app.config['MOBILENET_INCORRECT'],
+        save_path=vgg_save_path
+    )
+
+    return jsonify({"message": "Models retrained successfully!"}), 200
