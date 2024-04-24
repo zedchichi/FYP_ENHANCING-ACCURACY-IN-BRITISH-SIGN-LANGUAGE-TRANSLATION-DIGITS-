@@ -2,3 +2,5 @@
 /.vscode/
 /venv/Lib/site-packages/
 /venv/
+/app/BSL_MobileNet_HD_build_mobilenet_hyper3.h5
+/app/BSL_VGG16_Cus_FT_HD_Best_Model5.h5

@@ -3,15 +3,9 @@ import cv2
 from keras.preprocessing import image
 from tensorflow.keras.models import load_model
 import numpy as np
-import os
 import uuid
-import shutil
-import tensorflow as tf
-from werkzeug.utils import secure_filename
 
-from retrain_models import retrain_mobilenet, retrain_vgg16
-from keras.applications.mobilenet import decode_predictions
-from tensorflow.keras.models import load_model
+from werkzeug.utils import secure_filename
 
 import os
 import shutil
@@ -27,15 +21,20 @@ tf.compat.v1.logging.set_verbosity(tf.logging.ERROR)
 
 import mediapipe as mp
 
+import magic #python-magic to check MIME types
+
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 
 views_blueprint = Blueprint('views', __name__, template_folder='templates')
 
-custom_mobilenet = load_model(current_app.config['mobilenet_path'])
+# custom_mobilenet = load_model(current_app.config['mobilenet_path'])
+#custom_vgg16 = load_model(current_app.config['vggmodel_path'])
 
-custom_vgg16 = load_model(current_app.config['vggmodel_path'])
+custom_mobilenet = load_model(current_app.config['mobilenet_save_path'])
+
+custom_vgg16 = load_model(current_app.config['vgg_save_path'])
 
 @views_blueprint.route('/')
 def home():
@@ -135,6 +134,7 @@ def capture():
 def captured_file(filename):
     return send_from_directory(current_app.config['CAPTURED_FOLDER'], filename)
 
+
 @views_blueprint.route('/upload', methods=['GET', 'POST'])
 def upload():
     if request.method =='GET':
@@ -168,11 +168,11 @@ def upload():
             prediction2 = custom_mobilenet(img_array)
             pred2_result = np.argmax(prediction2[0])
 
-            return jsonify({'vgg16_prediction': str(pred_result), 'mobilenet_prediction': str(pred2_result), 'image_id': image_id})
+            return jsonify(
+                {'vgg16_prediction': str(pred_result), 'mobilenet_prediction': str(pred2_result), 'image_id': image_id})
         else:
             return jsonify({'error': 'No hand detected'})
     return jsonify({'error': 'File processing error'}), 500
-
 
 @views_blueprint.route('/upload/<filename>')
 def uploaded_file(filename):
@@ -232,8 +232,8 @@ def determine_initial_folder(image_id):
 
 def initialize_models():
     global custom_mobilenet, custom_vgg16
-    custom_mobilenet = load_model(current_app.config['mobilenet_path'])
-    custom_vgg16 = load_model(current_app.config['vggmodel_path'])
+    custom_mobilenet = load_model(current_app.config['mobilenet_save_path'])
+    custom_vgg16 = load_model(current_app.config['vgg_save_path'])
     print("Models initialized successfully.")
 
 def load_models():

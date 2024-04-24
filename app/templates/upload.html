@@ -154,24 +154,6 @@
                             <input type="hidden" id="predicted-class" name="predicted-class" value="">
 
                             <div class="feedback-section">
-                                <h3>VGG16 Feedback</h3>
-                                 <div class="form-group">
-                                    <label for="vgg-correct">Was the VGG16 prediction correct?</label>
-                                    <div>
-                                        <input type="radio" id="vgg-yes" name="feedback-vgg" value="yes">
-                                        <label for="vgg-yes">Yes</label>
-                                    </div>
-                                    <div>
-                                        <input type="radio" id="vgg-no" name="feedback-vgg" value="no">
-                                        <label for="vgg-no">No</label>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="col">
-                                        <input type="text" class="form-control" id="correct-prediction-vgg" name="correct-prediction-vgg" placeholder="Correct VGG16 Prediction">
-                                    </div>
-                                </div>
-
                                 <h3 class="row mt-3">MobileNet Feedback</h3>
                                 <div class="form-group">
                                     <label for="mobilenet-correct">Was the MobileNet prediction correct?</label>
@@ -190,6 +172,25 @@
                                         <input type="text" class="form-control" id="correct-prediction-mobilenet" name="correct-prediction-mobilenet" placeholder="Correct MobileNet Prediction">
                                     </div>
                                 </div>
+
+                                <h3>VGG16 Feedback</h3>
+                                 <div class="form-group">
+                                    <label for="vgg-correct">Was the VGG16 prediction correct?</label>
+                                    <div>
+                                        <input type="radio" id="vgg-yes" name="feedback-vgg" value="yes">
+                                        <label for="vgg-yes">Yes</label>
+                                    </div>
+                                    <div>
+                                        <input type="radio" id="vgg-no" name="feedback-vgg" value="no">
+                                        <label for="vgg-no">No</label>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <input type="text" class="form-control" id="correct-prediction-vgg" name="correct-prediction-vgg" placeholder="Correct VGG16 Prediction">
+                                    </div>
+                                </div>
+
                             </div>
                              <div class="row mt-3">
                                  <input type="submit" value="SUBMIT FEEDBACK">
@@ -295,8 +296,8 @@
              if (data.vgg16_prediction && data.mobilenet_prediction && data.image_id) {
                     // Display the prediction result
                     resultContainer.innerHTML = `
-                    <p> VGG16 Prediction: ${data.vgg16_prediction}</p>
                     <p> MobileNet Prediction: ${data.mobilenet_prediction}</p>
+                    <p> VGG16 Prediction: ${data.vgg16_prediction}</p>
                     `;
 
                 resultContainer.style.display = 'block'; // Make sure to display the result container
@@ -324,10 +325,10 @@
 
             let feedbackData = {
                 image_id: imageId,
+                correct_class_mobilenet: correctClassMobileNet,
+                feedback_correct_mobilenet: feedbackCorrectMobileNet,
                 correct_class_vgg: correctClassVGG,
                 feedback_correct_vgg: feedbackCorrectVGG,
-                correct_class_mobilenet: correctClassMobileNet,
-                feedback_correct_mobilenet: feedbackCorrectMobileNet
             };
 
             fetch('/submit_feedback', {
