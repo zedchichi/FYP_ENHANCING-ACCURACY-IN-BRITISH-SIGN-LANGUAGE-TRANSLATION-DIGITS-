@@ -1,4 +1,6 @@
+import os
 from flask import Flask
+from flask_session import Session
 
 def create_app():
     app = Flask(__name__)
@@ -14,11 +16,9 @@ def create_app():
     app.config['mobilenet_save_path'] = '/app/updated_mobilenet_model.h5'
     app.config['vgg_save_path'] = '/app/updated_vgg_model.h5'
 
-
     with app.app_context():
         from app.views import views_blueprint, initialize_models
-        app.register_blueprint(views_blueprint) #register blueprint
+        app.register_blueprint(views_blueprint)  # register blueprint
         initialize_models()
-
 
     return app

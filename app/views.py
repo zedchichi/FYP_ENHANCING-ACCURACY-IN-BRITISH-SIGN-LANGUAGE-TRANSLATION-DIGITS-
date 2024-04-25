@@ -164,12 +164,19 @@ def upload():
 
             prediction = custom_vgg16.predict(img_array)
             pred_result = np.argmax(prediction[0])
+            prediction_confidence = np.max(prediction[0])
 
             prediction2 = custom_mobilenet(img_array)
             pred2_result = np.argmax(prediction2[0])
+            prediction2_confidence = np.max(prediction2[0])
 
-            return jsonify(
-                {'vgg16_prediction': str(pred_result), 'mobilenet_prediction': str(pred2_result), 'image_id': image_id})
+            return jsonify({
+                'vgg16_prediction': str(pred_result),
+                 'vgg16_confidence': float(prediction_confidence),
+                 'mobilenet_prediction': str(pred2_result),
+                 'mobilenet_confidence': float(prediction2_confidence),
+                 'image_id': image_id
+            })
         else:
             return jsonify({'error': 'No hand detected'})
     return jsonify({'error': 'File processing error'}), 500
