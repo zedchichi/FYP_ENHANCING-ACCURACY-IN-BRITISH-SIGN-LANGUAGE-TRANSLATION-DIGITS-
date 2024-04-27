@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import mediapipe as mp
 from tensorflow.keras.applications import MobileNet, VGG16
@@ -12,6 +13,16 @@ from math import ceil
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5)
 
+def clear_directory(path):
+    for file in os.listdir(path):
+        file_path = os.path.join(path, file)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as E:
+            print(f"Failed to delete {file_path}. Reason: {E}")
 
 def retrain_mobilenet(model, train_dir, val_dir, save_path):
     print("Retraining MobileNet...")
@@ -69,6 +80,7 @@ def retrain_mobilenet(model, train_dir, val_dir, save_path):
     # Save the retrained model
     model.save(save_path)
     print("MobileNet Retrained and saved at {}".format(save_path))
+
 
 def retrain_vgg16(model, train_dir, val_dir, save_path):
     print("Retraining VGG16...")
@@ -129,3 +141,7 @@ def retrain_vgg16(model, train_dir, val_dir, save_path):
     # Save the retrained model
     model.save(save_path)
     print("VGG16 Retrained and saved at {}".format(save_path))
+
+    #cleaning the directories
+    # clear_directory(train_dir)
+    # clear_directory(val_dir)

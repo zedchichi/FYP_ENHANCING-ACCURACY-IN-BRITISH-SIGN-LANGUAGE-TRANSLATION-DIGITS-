@@ -1,3 +1,5 @@
+import tempfile
+
 from flask import current_app, Blueprint, render_template, request, send_from_directory, jsonify
 import cv2
 from keras.preprocessing import image
@@ -84,6 +86,12 @@ def save_image(data, folder, prefix):
         file.write(data)
     return filepath, filename
 
+def save_image_temporarily(data):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+    temp_path = temp_file.name
+    with open(temp_path, 'wb') as file:
+        file.write(data)
+    return temp_path
 
 @views_blueprint.route('/capture', methods=['GET', 'POST'])
 def capture():
@@ -93,12 +101,17 @@ def capture():
         return jsonify({'error': 'No image data provided'}), 400
 
     image_file = request.files['image']
+    consent_given = request.form.get('consent') =='true'
+
     if image_file:
         image_data = image_file.read()
-        captures_files_path = current_app.config['CAPTURED_FOLDER']
-        os.makedirs(captures_files_path, exist_ok=True)
+        if consent_given:
+            captures_files_path = current_app.config['CAPTURED_FOLDER']
+            os.makedirs(captures_files_path, exist_ok=True)
 
-        filepath, image_id = save_image(image_data, captures_files_path, 'cap')
+            filepath, image_id = save_image(image_data, captures_files_path, 'cap')
+        else:
+            filepath = save_image_temporarily(image_data) #done just to process the image
 
         img = cv2.imread(filepath)
         hand_img = process_hand_detection(img)
@@ -119,14 +132,19 @@ def capture():
             vgg_pred_class = np.argmax(vgg_prediction[0])
             vgg_confidence = np.max(vgg_prediction[0])
 
+            if not consent_given:
+                os.remove(filepath) #remove temp img
+
             return jsonify({
                 'mobilenet_prediction': str(mobilenet_pred_class),
                 'mobilenet_confidence': float(mobilenet_confidence),
                 'vgg16_prediction': str(vgg_pred_class),
                 'vgg16_confidence': float(vgg_confidence),
-                'image_id': image_id
+                'image_id': image_id if consent_given else "Consent not given"
             })
         else:
+            if not consent_given:
+                os.remove(filepath)
             return jsonify({'error': 'No hand detected'})
 
     return jsonify({'error': 'File processing error'}), 500
@@ -141,16 +159,21 @@ def upload():
         return render_template('upload.html')
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
+
     file = request.files['file']
+    consent_given = request.form.get('consent') == 'true'
+
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
+
     if file:
         filename = secure_filename(file.filename)
-        os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-        # filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        # file.save(filepath)
-        filepath, image_id = save_image(file.read(), current_app.config['UPLOAD_FOLDER'], 'upl')
+        if consent_given:
+            os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
+            filepath, image_id = save_image(file.read(), current_app.config['UPLOAD_FOLDER'], 'upl')
+        else:
+            filepath = save_image_temporarily(file.read())
 
         img = cv2.imread(filepath)
         hand_img = process_hand_detection(img)
@@ -170,14 +193,19 @@ def upload():
             pred2_result = np.argmax(prediction2[0])
             prediction2_confidence = np.max(prediction2[0])
 
+            if not consent_given:
+                os.remove(filepath)
+
             return jsonify({
                 'vgg16_prediction': str(pred_result),
                  'vgg16_confidence': float(prediction_confidence),
                  'mobilenet_prediction': str(pred2_result),
                  'mobilenet_confidence': float(prediction2_confidence),
-                 'image_id': image_id
+                 'image_id': image_id if consent_given else "Consent not given"
             })
         else:
+            if not consent_given:
+                os.remove(filepath)
             return jsonify({'error': 'No hand detected'})
     return jsonify({'error': 'File processing error'}), 500
 
@@ -255,10 +283,12 @@ def reload_models():
     load_models()
     return jsonify({"message": "Models reloaded successfully!"})
 
+
 @views_blueprint.route('/retrain', methods=['POST'])
 def retrain_models():
     if 'custom_mobilenet' not in globals() or 'custom_vgg16' not in globals():
         return jsonify({"error": "Models are not loaded"}), 500
+
     mobilenet_save_path = current_app.config['mobilenet_save_path']
     vgg_save_path = current_app.config['vgg_save_path']
 
@@ -275,4 +305,5 @@ def retrain_models():
         save_path=vgg_save_path
     )
 
+    initialize_models()
     return jsonify({"message": "Models retrained successfully!"}), 200

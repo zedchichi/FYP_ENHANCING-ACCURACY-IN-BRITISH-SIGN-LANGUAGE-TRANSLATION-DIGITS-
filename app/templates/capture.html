@@ -213,7 +213,7 @@
                          <br>
 
                          <div class="consent-checkbox" data-intro="Tick this box, to give consent to save your sign images for future retraining!">
-                             <input type="checkbox" id="consent" name="consent" required>
+                             <input type="checkbox" id="consent" name="consent">
                              <label for="consent">I consent to have my data used for model training</label>
                          </div>
 
@@ -327,6 +327,7 @@
                     let file = new File([blob], 'capture.png', {type: 'image/png', lastModified: Date.now()});
                     let formData = new FormData();
                     formData.append('image', file);
+                    formData.append('consent', document.getElementById('consent').checked);
                     uploadFile(formData);
                 }, 'image/png');
             });
@@ -342,10 +343,7 @@
                     document.getElementById('loadingIndicator').style.display = 'none';
                     displayResults(data);
                 })
-                .catch(error => {
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                    console.error('Error:', error);
-                });
+                .catch(error => console.error('Error:', error));
             }
 
             function displayResults(data) {

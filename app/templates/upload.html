@@ -208,10 +208,10 @@
                         </div>
                         <img id="preview" style="max-width: 200px; display: none;" />
                         <div class="consent-checkbox" data-intro="Tick this box, to give consent to save your sign images for future retraining!">
-                            <input type="checkbox" id="consent" name="consent" required>
+                            <input type="checkbox" id="consent" name="consent">
                             <label for="consent">I consent to have my data used for model training</label>
                         </div>
-                         <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Predict</button>
+                         <button id="predictButton" class="btn" style="display:none;" onclick="requestPrediction()">Translate</button>
                     <div id="loadingIndicator" style="display: none;">Uploading...</div>
                     </div>
                  </div>
@@ -247,10 +247,6 @@
         function handleFiles(files) {
             if (files.length > 0) {
                 let file = files[0];
-                if (!document.getElementById('consent').checked) {
-                    alert('Please provide consent to use your data for model training.');
-                    return;
-                }
                 previewFile(file);
                 document.getElementById('predictButton').style.display = 'block';
             }
