@@ -23,7 +23,7 @@ tf.compat.v1.logging.set_verbosity(tf.logging.ERROR)
 
 import mediapipe as mp
 
-import magic #python-magic to check MIME types
+import time
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -123,14 +123,29 @@ def capture():
             img_array = np.expand_dims(img_array, axis=0)
             img_array = img_array / 255.0
 
+            #mobilenet prediction time
+            start_time = time.time()
+
             mobilenet_prediction = custom_mobilenet.predict(img_array)
-            vgg_prediction = custom_vgg16.predict(img_array)
 
             mobilenet_pred_class = np.argmax(mobilenet_prediction[0])
             mobilenet_confidence = np.max(mobilenet_prediction[0])
 
+            mobilenet_time = time.time() - start_time
+            # Print MobileNet time to console
+            print(f"MobileNet Inference Time: {mobilenet_time:.3f} seconds")
+
+            #vgg16 prediction time
+            vgg_start_time = time.time()
+
+            vgg_prediction = custom_vgg16.predict(img_array)
             vgg_pred_class = np.argmax(vgg_prediction[0])
             vgg_confidence = np.max(vgg_prediction[0])
+
+            vgg16_time = time.time() - vgg_start_time
+
+            # Print VGG time to console
+            print(f"VGG Inference Time: {vgg16_time:.3f} seconds")
 
             if not consent_given:
                 os.remove(filepath) #remove temp img

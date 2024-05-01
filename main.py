@@ -28,32 +28,31 @@ logger = configure_logging()
 app = create_app()
 
 #Initialising Talisman with strict security policies
-Talisman(app, content_security_policy=None)
-# Talisman(app,
-#          content_security_policy={
-#              'default-src': [
-#                  '\'self\'',
-#                  'https://cdn.jsdelivr.net',
-#                  'https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css',
-#                  'https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css',
-#                  'https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js',
-#                  'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js',
-#              ],
-#              'style-src': [
-#                  '\'self\'',
-#                  '\'unsafe-inline\'',
-#                  'https://cdn.jsdelivr.net',
-#              ],
-#              'script-src': [
-#                  '\'self\'',
-#                  'https://cdn.jsdelivr.net',
-#                  '\'unsafe-inline\'',  #inline scripts
-#                  '\'unsafe-eval\'',
-#              ]
-#
-#          },
-#          content_security_policy_nonce_in=['script-src'])
+#Talisman(app, content_security_policy=None)
+Talisman(app,
+         content_security_policy={
+             'default-src': [
+                 '\'self\'',
+                 'https://cdn.jsdelivr.net',
+                 'https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css',
+                 'https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css',
+                 'https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js',
+                 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js',
+             ],
+             'style-src': [
+                 '\'self\'',
+                 '\'unsafe-inline\'',
+                 'https://cdn.jsdelivr.net',
+             ],
+             'script-src': [
+                 '\'self\'',
+                 'https://cdn.jsdelivr.net',
+                 '\'unsafe-inline\'',  #inline scripts
+                 '\'unsafe-eval\'',
+             ]
 
+         },
+         content_security_policy_nonce_in=['script-src'])
 
 def schedule_retraining():
     global logger

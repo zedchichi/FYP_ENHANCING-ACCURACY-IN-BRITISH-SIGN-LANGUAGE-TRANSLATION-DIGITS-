@@ -12,7 +12,8 @@ This repository contains a Flask application designed for real-time hand gesture
 
 
 # Prerequisites
-* Python 3.6+
+
+* Python 3.11
 * Flask
 * TensorFlow 2.15.0
 * Keras
